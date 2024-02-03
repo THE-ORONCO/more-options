@@ -7,11 +7,27 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 public sealed interface Result<T, E> {
-    record Ok<T, E>(T result) implements Result<T, E> {}
+    @ToString
+    @EqualsAndHashCode
+    @AllArgsConstructor(access = AccessLevel.PRIVATE)
+    final class Ok<T, E> implements Result<T, E> {
+        private final T result;
+        public T result() {return result;}
+    }
 
-    record Err<T, E>(E error) implements Result<T, E> {}
+    @ToString
+    @EqualsAndHashCode
+    @AllArgsConstructor(access = AccessLevel.PRIVATE)
+    final class Err<T, E> implements Result<T, E> {
+        private final E error;
+        public E error() {return error;}
+    }
 
     default boolean isOk() {
         return switch (this) {
@@ -71,9 +87,9 @@ public sealed interface Result<T, E> {
     default Option<T> ok() {
         return switch (this) {
             case Ok<T, E> ok:
-                yield new Option.Some<>(ok.result);
+                yield Option.some(ok.result);
             case Err<T, E> ignored:
-                yield new Option.None<>();
+                yield Option.none();
         };
     }
 
@@ -85,9 +101,9 @@ public sealed interface Result<T, E> {
     default Option<E> err() {
         return switch (this) {
             case Ok<T, E> ignored:
-                yield new Option.None<>();
+                yield Option.none();
             case Err<T, E> err:
-                yield new Option.Some<>(err.error);
+                yield Option.some(err.error);
         };
     }
 

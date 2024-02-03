@@ -1,6 +1,7 @@
 package the.oronco.adt;
 
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -9,6 +10,11 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
+import lombok.AccessLevel;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.NonNull;
+import lombok.ToString;
 
 // TODO examples like in the rust documentation
 // TODO replace exceptions with better exceptions
@@ -25,9 +31,20 @@ import java.util.stream.Stream;
 public sealed interface Option<T> {
     None<?> NONE = new None<>();
 
-    record None<T>() implements Option<T> {}
+    @ToString
+    @EqualsAndHashCode
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    final class None<T> implements Option<T> {
+    }
+    @ToString
+    @EqualsAndHashCode
+    final class Some<T> implements Option<T> {
+        private final T value;
 
-    record Some<T>(T value) implements Option<T> {}
+        private Some(@NonNull T value) {this.value = value;}
+
+        public T value() {return value;}
+    }
 
     default boolean isSome() {
         return switch (this) {
@@ -216,8 +233,8 @@ public sealed interface Option<T> {
      */
     default <E> Result<T, E> okOr(E err) {
         return switch (this) {
-            case Some<T> some -> new Result.Ok<>(some.value);
-            case None<T> ignored -> new Result.Err<>(err);
+            case Some<T> some -> Result.ok(some.value);
+            case None<T> ignored -> Result.err(err);
         };
     }
 
@@ -232,8 +249,8 @@ public sealed interface Option<T> {
      */
     default <E> Result<T, E> okOrElse(Supplier<? extends E> err) {
         return switch (this) {
-            case Some<T> some -> new Result.Ok<>(some.value);
-            case None<T> ignored -> new Result.Err<>(err.get());
+            case Some<T> some -> Result.ok(some.value);
+            case None<T> ignored -> Result.err(err.get());
         };
     }
 
@@ -248,17 +265,7 @@ public sealed interface Option<T> {
         return switch (this) {
             case Some<T> some -> Stream.of(some.value)
                                        .iterator();
-            case None<T> ignored -> new Iterator<T>() {
-                @Override
-                public boolean hasNext() {
-                    return false;
-                }
-
-                @Override
-                public T next() {
-                    return null;
-                }
-            };
+            case None<T> ignored -> Collections.emptyIterator();
         };
     }
 
@@ -386,6 +393,11 @@ public sealed interface Option<T> {
     static <T> Option<T> optionOf(@SuppressWarnings("OptionalUsedAsFieldOrParameterType") Optional<T> optional) {
         return optional.map(Option::some)
                        .orElseGet(Option::none);
+    }
+    static <T> Option<T> of(T value) {
+        if (value == null)
+            return none();
+        return some(value);
     }
 
     static <T> Option<T> some(T value) {

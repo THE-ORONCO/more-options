@@ -1,9 +1,9 @@
 package the.oronco.adt;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -14,6 +14,11 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import lombok.AccessLevel;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.NonNull;
+import lombok.ToString;
 
 // TODO examples like in the rust documentation
 // TODO replace exceptions with better exceptions
@@ -28,18 +33,29 @@ import java.util.stream.Stream;
 public sealed interface MultiOption<T> {
     None<?> NONE = new None<>();
 
-    record None<T>() implements MultiOption<T> {}
+    @ToString
+    @EqualsAndHashCode
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    final class None<T> implements MultiOption<T> {}
 
-    record One<T>(T value) implements MultiOption<T> {}
+    @ToString
+    @EqualsAndHashCode
+    final class One<T> implements MultiOption<T> {
+        private final T value;
 
-    record Many<T>(Collection<T> values) implements MultiOption<T> {
-        public Set<T> manySet() {
-            return new HashSet<>(values);
-        }
+        private One(@NonNull T value) {this.value = value;}
 
-        public List<T> manyList() {
-            return new ArrayList<>(values);
-        }
+        public T value() {return value;}
+    }
+
+    @ToString
+    @EqualsAndHashCode
+    final class Many<T> implements MultiOption<T> {
+        private final Collection<T> values;
+
+        public Many(Collection<T> values) {this.values = values;}
+
+        public Collection<T> values() {return values;}
     }
 
     default boolean isNone() {
@@ -107,6 +123,39 @@ public sealed interface MultiOption<T> {
             case None<T> ignored -> Stream.of();
             case One<T> one -> Stream.of(one.value);
             case Many<T> many -> many.values.stream();
+        };
+    }
+
+    default Set<T> toSet() {
+        return switch (this) {
+            case None<T> ignored -> Set.of();
+            case One<T> one -> Set.of(one.value);
+            case Many<T> many -> Set.copyOf(many.values);
+        };
+    }
+
+    default List<T> toList() {
+        return switch (this) {
+            case None<T> ignored -> List.of();
+            case One<T> one -> List.of(one.value);
+            case Many<T> many -> List.copyOf(many.values);
+        };
+    }
+
+    default Iterator<T> toIterator() {
+        return switch (this) {
+            case None<T> ignored -> Collections.emptyIterator();
+            case One<T> one -> Stream.of(one.value)
+                                     .iterator();
+            case Many<T> many -> many.values.iterator();
+        };
+    }
+
+    default <C> C wrap(Function<? super Collection<T>, ? extends C> wrap) {
+        return switch (this) {
+            case None<T> ignored -> wrap.apply(Collections.EMPTY_LIST);
+            case One<T> one -> wrap.apply(Collections.singleton(one.value));
+            case Many<T> many -> wrap.apply(many.values);
         };
     }
 
@@ -220,12 +269,11 @@ public sealed interface MultiOption<T> {
     }
 
     /**
-     * Returns the provided default result (if {@code None<T>}), or applies a {@code Fuction<T,R>} to the contained value (if
-     * {@code One}) or values (if {@code Many<T>}).
+     * Returns the provided default result (if {@code None<T>}), or applies a {@code Fuction<T,R>} to the contained value (if {@code One})
+     * or values (if {@code Many<T>}).
      * <p>
      * Arguments passed to {@link MultiOption#mapOr(Collection, Function)} are eagerly evaluated; if you are passing the result of a
-     * function call,
-     * it is recommended to use {@link MultiOption#mapOrElse(Supplier, Function)}, which is lazily evaluated.
+     * function call, it is recommended to use {@link MultiOption#mapOrElse(Supplier, Function)}, which is lazily evaluated.
      *
      * @param defaultValue default value that is returned if {@code None<T>}
      * @param f            function that converts the value in case of {@code One<T>} and values in case of {@code Many<T>}
@@ -237,9 +285,12 @@ public sealed interface MultiOption<T> {
         return switch (this) {
             case None<T> ignored -> defaultValue;
             case One<T> one -> Collections.singletonList(f.apply(one.value));
-            case Many<T> many -> many.values.stream().map(f).collect(Collectors.toList());
+            case Many<T> many -> many.values.stream()
+                                            .map(f)
+                                            .collect(Collectors.toList());
         };
     }
+
     /**
      * + Computes a default function result (if {@code None}), or applies a different function to the contained value (if {@code One}) or
      * values (if {@code Many<T>}).
@@ -254,7 +305,9 @@ public sealed interface MultiOption<T> {
         return switch (this) {
             case None<T> ignored -> defaultSupplier.get();
             case One<T> one -> Collections.singletonList(f.apply(one.value));
-            case Many<T> many -> many.values.stream().map(f).collect(Collectors.toList());
+            case Many<T> many -> many.values.stream()
+                                            .map(f)
+                                            .collect(Collectors.toList());
         };
     }
 
@@ -357,5 +410,10 @@ public sealed interface MultiOption<T> {
 
     static <T, C extends Collection<T>> MultiOption<T> many(C many) {
         return new Many<>(many);
+    }
+
+    @SafeVarargs
+    static <T> MultiOption<T> many(T... many) {
+        return new Many<>(Arrays.asList(many));
     }
 }
