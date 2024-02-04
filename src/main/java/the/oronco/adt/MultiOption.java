@@ -153,7 +153,7 @@ public sealed interface MultiOption<T> {
 
     default <C> C wrap(Function<? super Collection<T>, ? extends C> wrap) {
         return switch (this) {
-            case None<T> ignored -> wrap.apply(Collections.EMPTY_LIST);
+            case None<T> ignored -> wrap.apply((Collection<T>) Collections.EMPTY_LIST);
             case One<T> one -> wrap.apply(Collections.singleton(one.value));
             case Many<T> many -> wrap.apply(many.values);
         };

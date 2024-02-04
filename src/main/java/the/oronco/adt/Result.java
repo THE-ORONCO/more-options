@@ -436,7 +436,7 @@ public sealed interface Result<T, E> {
         return new Err<>(error);
     }
 
-    static <T, E> Ok<T,E > ok(T result){
+    static <T, E> Ok<T,E> ok(T result){
         return new Ok<>(result);
     }
 }
