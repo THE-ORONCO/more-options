@@ -106,6 +106,10 @@ public interface Iter<T> {
         return new TakeWhile<>(this, predicate);
     }
 
+    default <B, P extends Function<? super T, Option<B>>> MapWhile<B, T, P> mapWhile(P predicate) {
+        return new MapWhile<>(this, predicate);
+    }
+
     default <B> B fold(B init, BiFunction<B, ? super T, B> f) {
         B accum = init;
         var a = this.next();
