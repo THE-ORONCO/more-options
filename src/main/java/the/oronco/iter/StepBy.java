@@ -1,10 +1,10 @@
 package the.oronco.iter;
 
-import java.util.Objects;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import the.oronco.adt.Option;
 
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PROTECTED)
 public final class StepBy<T> implements Iter<T> {
     private final Iter<T> tIter;
     private final int step;

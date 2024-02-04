@@ -6,15 +6,16 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import the.oronco.adt.Option;
+import the.oronco.adt.Result;
 import the.oronco.tuple.Twople;
 
 public interface Iter<T> {
     Option<T> next();
 
-//    default Result<T[], Iter<T>> nextChunk(int size) {
-//        List<T> accum = new ArrayList<>();
-//        while (this.)
-//    }
+    default Result<T[], Iter<T>> nextChunk(int size) {
+        // TODO
+        return null;
+    }
 
     default Twople<Integer, Option<Integer>> sizeHint() {
         return new Twople<>(0, Option.none());
@@ -24,27 +25,30 @@ public interface Iter<T> {
         return this.fold(0, (count, ignored) -> count + 1);
     }
 
+    // TODO create a size type and a non zero integer type
+    default Result<Object, Integer> advanceBy(int n) {
+        for (int i = 0; i < n; i++) {
+            if (this.next()
+                    .isNone()) {
+                return Result.err(n - i);
+            }
+        }
+
+        return Result.ok(new Object()); // TODO find better solution
+    }
+
+    default Option<T> nth(int n) {
+        if (this.advanceBy(n)
+                .ok()
+                .isNone()) {
+            return Option.none();
+        }
+        return this.next();
+    }
+
     default Option<T> last() {
         return this.fold(Option.none(), (Option<T> ignored, T t) -> Option.some(t));
     }
-
-    // TODO create a size type and a non zero integer type
-//    default Result<Void, Integer> advanceBy(int n) {
-//        for (int i = 0; i < n; i++) {
-//            if (this.next()
-//                    .isNone()) {
-//                return Result.err(n - i);
-//            }
-//        }
-//
-//        return Result.ok();
-//    }
-
-//    default Option<T> nth(int n) {
-//        this.advanceBy(n);
-//        return this.next();
-//    }
-
 
     default StepBy<T> stepBy(int step) {
         return new StepBy<>(this, step);

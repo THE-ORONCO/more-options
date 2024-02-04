@@ -1,6 +1,5 @@
 package the.oronco.iter;
 
-import java.util.Objects;
 import the.oronco.adt.Option;
 
 public final class Peekable<T> implements Iter<T> {
