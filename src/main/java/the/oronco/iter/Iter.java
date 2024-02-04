@@ -1,6 +1,5 @@
 package the.oronco.iter;
 
-import java.util.Enumeration;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -97,6 +96,10 @@ public interface Iter<T> {
 
     default <P extends Predicate<? super T>> SkipWhile<T, P> skipWhile(P predicate) {
         return new SkipWhile<>(this, predicate);
+    }
+
+    default <P extends Predicate<? super T>> TakeWhile<T, P> takeWhile(P predicate) {
+        return new TakeWhile<>(this, predicate);
     }
 
     default <B> B fold(B init, BiFunction<B, ? super T, B> f) {
