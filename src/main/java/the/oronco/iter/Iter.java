@@ -114,6 +114,11 @@ public interface Iter<T> {
         return new Skip<>(this, n);
     }
 
+    default Take<T> take(int n ){
+        return new Take<>(this, n);
+    }
+
+
     default <B> B fold(B init, BiFunction<B, ? super T, B> f) {
         B accum = init;
         var a = this.next();
