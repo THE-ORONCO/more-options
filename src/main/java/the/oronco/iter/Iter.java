@@ -5,10 +5,15 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 import the.oronco.adt.Option;
 import the.oronco.adt.Result;
 import the.oronco.tuple.Twople;
 
+// TODO implement all methods
+// TODO implement the class functionalities behind the methods
+// TODO extend Rusty<Iterable<T>>
+// TODO tests
 public interface Iter<T> extends IntoIter<T> {
     Option<T> next();
 
@@ -63,7 +68,7 @@ public interface Iter<T> extends IntoIter<T> {
     }
 
     default <U extends T> Intersperse<T, Iter<T>> intersperse(U separator) {
-        return new Intersperse<>(this, separator);
+        return new Intersperse<>(new Peekable<>(this), separator);
     }
 
     default <E extends T, G extends Supplier<E>> IntersperseWith<T, E, G, Iter<T>> intersperseWith(G separator) {
@@ -110,12 +115,16 @@ public interface Iter<T> extends IntoIter<T> {
         return new MapWhile<>(this, predicate);
     }
 
-    default Skip<T> skip(int n){
+    default Skip<T> skip(int n) {
         return new Skip<>(this, n);
     }
 
-    default Take<T> take(int n ){
+    default Take<T> take(int n) {
         return new Take<>(this, n);
+    }
+
+    default <R, F extends Function<? super T, ? extends IntoIter<? extends R>>> FlatMap<T, R, F> flatMap(F f) {
+        return new FlatMap<>(this, f);
     }
 
 
@@ -131,7 +140,7 @@ public interface Iter<T> extends IntoIter<T> {
     }
 
     @Override
-    default Iter<T> intoIter(){
+    default Iter<T> intoIter() {
         return this;
     }
 }

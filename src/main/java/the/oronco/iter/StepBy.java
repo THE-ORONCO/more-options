@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import the.oronco.adt.Option;
 
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
-public final class StepBy<T> implements Iter<T> {
+public class StepBy<T> implements Iter<T> {
     private final Iter<T> tIter;
     private final int step;
 
