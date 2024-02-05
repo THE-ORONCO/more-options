@@ -9,7 +9,7 @@ import the.oronco.adt.Option;
 import the.oronco.adt.Result;
 import the.oronco.tuple.Twople;
 
-public interface Iter<T> {
+public interface Iter<T> extends IntoIter<T> {
     Option<T> next();
 
     default Result<T[], Iter<T>> nextChunk(int size) {
@@ -128,5 +128,10 @@ public interface Iter<T> {
                                 .unwrap());
         }
         return accum;
+    }
+
+    @Override
+    default Iter<T> intoIter(){
+        return this;
     }
 }

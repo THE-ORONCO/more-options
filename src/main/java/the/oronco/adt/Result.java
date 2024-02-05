@@ -2,6 +2,7 @@ package the.oronco.adt;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -11,13 +12,18 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
+import the.oronco.Rusty;
 
-public sealed interface Result<T, E> {
+// TODO examples like in the rust documentation
+// TODO replace exceptions with better exceptions
+// TODO tests
+public sealed interface Result<T, E> extends Rusty<Optional<T>> {
     @ToString
     @EqualsAndHashCode
     @AllArgsConstructor(access = AccessLevel.PRIVATE)
     final class Ok<T, E> implements Result<T, E> {
         private final T result;
+
         public T result() {return result;}
     }
 
@@ -26,6 +32,7 @@ public sealed interface Result<T, E> {
     @AllArgsConstructor(access = AccessLevel.PRIVATE)
     final class Err<T, E> implements Result<T, E> {
         private final E error;
+
         public E error() {return error;}
     }
 
@@ -432,11 +439,16 @@ public sealed interface Result<T, E> {
         };
     }
 
+    @Override
+    default Optional<T> j() {
+        return Optional.ofNullable(this.unwrapOr(null));
+    }
+
     static <T, E> Err<T, E> err(E error) {
         return new Err<>(error);
     }
 
-    static <T, E> Ok<T,E> ok(T result){
+    static <T, E> Ok<T, E> ok(T result) {
         return new Ok<>(result);
     }
 }

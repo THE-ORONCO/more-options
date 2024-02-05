@@ -19,6 +19,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.ToString;
+import the.oronco.Rusty;
 
 // TODO examples like in the rust documentation
 // TODO replace exceptions with better exceptions
@@ -30,7 +31,7 @@ import lombok.ToString;
  *
  * @param <T> Type of the value (needed for type save code)
  */
-public sealed interface MultiOption<T> {
+public sealed interface MultiOption<T> extends Rusty<Collection<T>> {
     None<?> NONE = new None<>();
 
     @ToString
@@ -396,6 +397,15 @@ public sealed interface MultiOption<T> {
             case None<T> ignored -> 0;
             case One<T> ignored -> 1;
             case Many<T> many -> many.values.size();
+        };
+    }
+
+    @Override
+    default Collection<T> j(){
+        return switch (this) {
+            case None<T> ignored -> Collections.emptyList();
+            case One<T> one -> Collections.singleton(one.value);
+            case Many<T> many -> many.values;
         };
     }
 

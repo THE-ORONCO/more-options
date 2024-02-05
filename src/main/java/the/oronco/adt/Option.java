@@ -15,10 +15,10 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.ToString;
+import the.oronco.Rusty;
 
 // TODO examples like in the rust documentation
 // TODO replace exceptions with better exceptions
-// TODO change naming scheme to be more java like (e.g. .unwrapOr -> .orElse, .unwrapOrElse -> .orElseGet)
 // TODO tests
 
 /**
@@ -28,7 +28,7 @@ import lombok.ToString;
  *
  * @param <T>
  */
-public sealed interface Option<T> {
+public sealed interface Option<T> extends Rusty<Optional<T>> {
     None<?> NONE = new None<>();
 
     @ToString
@@ -383,7 +383,7 @@ public sealed interface Option<T> {
      *
      * @return an optional containing the value of the option
      */
-    default Optional<T> toOptional() {
+    default Optional<T> j() {
         return switch (this) {
             case Some<T> some -> Optional.of(some.value);
             case None<T> ignored -> Optional.empty();
