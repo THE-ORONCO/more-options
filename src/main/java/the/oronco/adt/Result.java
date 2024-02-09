@@ -7,6 +7,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
+
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
@@ -18,7 +19,10 @@ public sealed interface Result<T, E> {
     @AllArgsConstructor(access = AccessLevel.PRIVATE)
     final class Ok<T, E> implements Result<T, E> {
         private final T result;
-        public T result() {return result;}
+
+        public T result() {
+            return result;
+        }
     }
 
     @ToString
@@ -26,7 +30,14 @@ public sealed interface Result<T, E> {
     @AllArgsConstructor(access = AccessLevel.PRIVATE)
     final class Err<T, E> implements Result<T, E> {
         private final E error;
-        public E error() {return error;}
+
+        public E error() {
+            return error;
+        }
+
+        public <R> Result<R, E> as() {
+            return Result.err(this.error);
+        }
     }
 
     default boolean isOk() {
@@ -42,7 +53,6 @@ public sealed interface Result<T, E> {
      * Returns {@code true} if the result is {@code Ok<T,E>}.
      *
      * @param predicate condition that an {@code Ok<T,E>} result should conform to
-     *
      * @return if the result is {@code Ok<T,E>} and conforms to the given predicate
      */
     default boolean isOkAnd(Predicate<? super T> predicate) {
@@ -67,7 +77,6 @@ public sealed interface Result<T, E> {
      * Returns {@code true} if the result is {@code Err<T,E>}.
      *
      * @param predicate condition that an {@code Err<T,E>} error value should conform to
-     *
      * @return if the result is {@code Err<T,E>} and conforms to the given predicate
      */
     default boolean isErrAnd(Predicate<? super E> predicate) {
@@ -108,14 +117,13 @@ public sealed interface Result<T, E> {
     }
 
     /**
-     * Maps a {@code Result<T, E>} to {@code Result<U, E>} by applying a function to a contained {@code Ok<T, E>} value, leaving an
-     * {@code Err<T, E>} value untouched.
+     * Maps a {@code Result<T, E>} to {@code Result<U, E>} by applying a function to a contained
+     * {@code Ok<T, E>} value, leaving an {@code Err<T, E>} value untouched.
      * <p>
      * This function can be used to compose the results of two functions.
      *
      * @param f   function that can convert {@code T} to {@code U}
      * @param <U> result type of the conversion if {@code this} result was {@code Ok<T,E>}
-     *
      * @return a new result with a converted value
      */
     default <U> Result<U, E> map(Function<? super T, ? extends U> f) {
@@ -128,14 +136,15 @@ public sealed interface Result<T, E> {
     }
 
     /**
-     * Returns the provided default (if {@code Err<T,E>}), or applies a function to the contained value (if {@code Ok<T, E>}),
+     * Returns the provided default (if {@code Err<T,E>}), or applies a function to the contained
+     * value (if {@code Ok<T, E>}),
      * <p>
-     * Arguments passed to {@link Result#mapOr(Object, Function)} are eagerly evaluated; if you are passing the result of a function call,
-     * it is recommended to use {@link Result#mapOrElse(Function, Function)}, which is lazily evaluated.
+     * Arguments passed to {@link Result#mapOr(Object, Function)} are eagerly evaluated; if you are
+     * passing the result of a function call, it is recommended to use
+     * {@link Result#mapOrElse(Function, Function)}, which is lazily evaluated.
      *
      * @param f   function that can convert {@code T} to {@code U}
      * @param <U> result type of the conversion if {@code this} result was {@code Ok<T,E>}
-     *
      * @return a new result with a converted value
      */
     default <U> U mapOr(U defaultValue, Function<? super T, ? extends U> f) {
@@ -148,18 +157,20 @@ public sealed interface Result<T, E> {
     }
 
     /**
-     * Maps a {@code Result<T, E>} to {@code U} by applying fallback function {@code d} to a contained {@code Err<T, E>} value, or function
-     * {@code f} to a contained {@code Ok<T, E>} value.
+     * Maps a {@code Result<T, E>} to {@code U} by applying fallback function {@code d} to a
+     * contained {@code Err<T, E>} value, or function {@code f} to a contained {@code Ok<T, E>}
+     * value.
      * <p>
      * This function can be used to unpack a successful result while handling an error.
      *
      * @param d   function that provides a default given an error
      * @param f   function mapping the value of a successful result
      * @param <U> type returned no matter if the result was {@code Ok<T, E>} or {@code Err<T, E>}
-     *
      * @return the mapped result or a default value
      */
-    default <U> U mapOrElse(Function<? super E, ? extends U> d, Function<? super T, ? extends U> f) {
+    default <U> U mapOrElse(
+            Function<? super E, ? extends U> d,
+            Function<? super T, ? extends U> f) {
         return switch (this) {
             case Ok<T, E> ok:
                 yield f.apply(ok.result);
@@ -169,14 +180,14 @@ public sealed interface Result<T, E> {
     }
 
     /**
-     * Maps a {@code Result<T, E>} to {@code Result<T, F>} by applying a function to a contained {@code Err<T, E>} value, leaving an
-     * {@code Ok<T, E>} value untouched.
+     * Maps a {@code Result<T, E>} to {@code Result<T, F>} by applying a function to a contained
+     * {@code Err<T, E>} value, leaving an {@code Ok<T, E>} value untouched.
      * <p>
      * This function can be used to pass through a successful result while handling an error.
      *
-     * @param f   function that converts the error into a more usable form (e.g. http status code to a message for the user)
+     * @param f   function that converts the error into a more usable form (e.g. http status code to
+     *            a message for the user)
      * @param <U> type of the new error
-     *
      * @return a result containing either the unchanged successful result or a converted error
      */
     default <U> Result<T, U> mapErr(Function<? super E, ? extends U> f) {
@@ -190,12 +201,13 @@ public sealed interface Result<T, E> {
 
 
     /**
-     * Calls the provided {@code Consumer<T, E>} with a reference to the contained value (if {@code Ok<T, E>}).
+     * Calls the provided {@code Consumer<T, E>} with a reference to the contained value (if
+     * {@code Ok<T, E>}).
      * <p>
-     * This can be used to chain multiple consumptions of a successful result without unwrapping the result.
+     * This can be used to chain multiple consumptions of a successful result without unwrapping the
+     * result.
      *
      * @param f consumer that wants the value
-     *
      * @return the result it was called on
      */
     default Result<T, E> inspect(Consumer<? super T> f) {
@@ -206,12 +218,13 @@ public sealed interface Result<T, E> {
     }
 
     /**
-     * Calls the provided {@code Consumer<T, E>} with a reference to the contained error (if {@code Err<T, E>}).
+     * Calls the provided {@code Consumer<T, E>} with a reference to the contained error (if
+     * {@code Err<T, E>}).
      * <p>
-     * This can be used to chain multiple consumptions for handling an error without unwrapping the result.
+     * This can be used to chain multiple consumptions for handling an error without unwrapping the
+     * result.
      *
      * @param f consumer that wants the error
-     *
      * @return the result it was called on
      */
     default Result<T, E> inspectErr(Consumer<? super E> f) {
@@ -244,13 +257,12 @@ public sealed interface Result<T, E> {
     /**
      * Returns the contained {@code Ok<T, E>} value.
      * <p>
-     * Because this function may throw, its use is generally discouraged. Instead, prefer to use pattern matching and handle the
-     * {@code Err<T, E>} case explicitly, or call {@link Result#unwrapOr(Object)} or {@link Result#unwrapOrElse(Supplier)}.
+     * Because this function may throw, its use is generally discouraged. Instead, prefer to use
+     * pattern matching and handle the {@code Err<T, E>} case explicitly, or call
+     * {@link Result#unwrapOr(Object)} or {@link Result#unwrapOrElse(Supplier)}.
      *
      * @param message the message of the thrown error
-     *
      * @return the successful result
-     *
      * @throws NoSuchElementException when {@code this} is an {@code Err<T, E>}
      */
     default T expect(String message) throws NoSuchElementException {
@@ -265,30 +277,31 @@ public sealed interface Result<T, E> {
     /**
      * Returns the contained {@code Ok<T, E>} value.
      * <p>
-     * Because this function may throw, its use is generally discouraged. Instead, prefer to use pattern matching and handle the
-     * {@code Err<T, E>} case explicitly, or call {@link Result#unwrapOr(Object)} or {@link Result#unwrapOrElse(Supplier)}.
+     * Because this function may throw, its use is generally discouraged. Instead, prefer to use
+     * pattern matching and handle the {@code Err<T, E>} case explicitly, or call
+     * {@link Result#unwrapOr(Object)} or {@link Result#unwrapOrElse(Supplier)}.
      *
      * @return the successful result
-     *
-     * @throws NoSuchElementException when {@code this} is an {@code Err<T, E>}; the message is provided by the {@code Err<T, E>}s value
+     * @throws NoSuchElementException when {@code this} is an {@code Err<T, E>}; the message is
+     *                                provided by the {@code Err<T, E>}s value
      */
     default T unwrap() throws NoSuchElementException {
         return switch (this) {
             case Ok<T, E> ok:
                 yield ok.result;
             case Err<T, E> err:
-                throw new NoSuchElementException("Result was unwrapped but it was Err: %s".formatted(err.error));
+                throw new NoSuchElementException("Result was unwrapped but it was Err: %s".formatted(
+                        err.error));
         };
     }
 
     /**
      * Returns the contained {@code Ok<T, E>} value or a default
      * <p>
-     * Consumes the self argument then, if {@code Ok<T, E>}, returns the contained value, otherwise if {@code Err<T, E>}, returns the
-     * provided {@code defaultValue}.
+     * Consumes the self argument then, if {@code Ok<T, E>}, returns the contained value, otherwise
+     * if {@code Err<T, E>}, returns the provided {@code defaultValue}.
      *
      * @param defaultValue default value when {@code Err<T, E>}
-     *
      * @return either the successful result value or the default value
      */
     default T unwrapOr(T defaultValue) {
@@ -301,14 +314,15 @@ public sealed interface Result<T, E> {
     }
 
     /**
-     * Returns the contained {@code Ok<T, E>} value or a default provided by the {@code defaultSupplier}
+     * Returns the contained {@code Ok<T, E>} value or a default provided by the
+     * {@code defaultSupplier}
      * <p>
-     * Consumes the self argument then, if {@code Ok<T, E>}, returns the contained value, otherwise if {@code Err<T, E>}, returns the
-     * default value returned by the {@code defaultSupplier}.
+     * Consumes the self argument then, if {@code Ok<T, E>}, returns the contained value, otherwise
+     * if {@code Err<T, E>}, returns the default value returned by the {@code defaultSupplier}.
      *
      * @param defaultSupplier default value when {@code Err<T, E>}
-     *
-     * @return either the successful result value or the default value provided by the {@code defaultSupplier}
+     * @return either the successful result value or the default value provided by the
+     *         {@code defaultSupplier}
      */
 
     default T unwrapOrElse(Supplier<? extends T> defaultSupplier) {
@@ -324,9 +338,7 @@ public sealed interface Result<T, E> {
      * Returns the contained {@code Err<T, E>} value.
      *
      * @param message the message of the thrown error
-     *
      * @return the successful result
-     *
      * @throws NoSuchElementException when {@code this} is an {@code Ok<T, E>}
      */
     default E expectErr(String message) throws NoSuchElementException {
@@ -342,27 +354,30 @@ public sealed interface Result<T, E> {
      * Returns the contained {@code Err<T, E>} value.
      *
      * @return the successful result
-     *
-     * @throws NoSuchElementException when {@code this} is an {@code Ok<T, E>}; the message is provided by the {@code Ok<T, E>}s value
+     * @throws NoSuchElementException when {@code this} is an {@code Ok<T, E>}; the message is
+     *                                provided by the {@code Ok<T, E>}s value
      */
     default E unwrapErr() throws NoSuchElementException {
         return switch (this) {
             case Ok<T, E> ok:
-                throw new NoSuchElementException("Result was unwrapped but it was Ok: %s".formatted(ok.result));
+                throw new NoSuchElementException("Result was unwrapped but it was Ok: %s".formatted(
+                        ok.result));
             case Err<T, E> err:
                 yield err.error;
         };
     }
 
     /**
-     * Returns {@code other} if the result is {@code Ok<T, E>}, otherwise returns the {@code Err<T, E>} value of {@code this}.
+     * Returns {@code other} if the result is {@code Ok<T, E>}, otherwise returns the
+     * {@code Err<T, E>} value of {@code this}.
      * <p>
-     * Arguments passed to {@code and()} are eagerly evaluated; if you are passing the result of a function call, it is recommended to use
-     * {@link Result#andThen(Supplier)}, which is lazily evaluated.
+     * Arguments passed to {@code and()} are eagerly evaluated; if you are passing the result of a
+     * function call, it is recommended to use {@link Result#andThen(Supplier)}, which is lazily
+     * evaluated.
      *
-     * @param other another result which should be conditionally be returned depending on the success status of {@code this}
+     * @param other another result which should be conditionally be returned depending on the
+     *              success status of {@code this}
      * @param <U>   type of the other successful result
-     *
      * @return the other successful result or the error of {@code this}
      */
     default <U> Result<U, E> and(Result<U, E> other) {
@@ -375,16 +390,18 @@ public sealed interface Result<T, E> {
     }
 
     /**
-     * Calls {@code f} if the result is {@code Ok<T, E>}, otherwise returns the {@code Err<T, E>} value of {@code this}.
+     * Calls {@code f} if the result is {@code Ok<T, E>}, otherwise returns the {@code Err<T, E>}
+     * value of {@code this}.
      * <p>
      * This function can be used for control flow based on Result values.
      *
-     * @param f   supplier of another result which should be conditionally be returned depending on the success status of {@code this}
+     * @param f   supplier of another result which should be conditionally be returned depending on
+     *            the success status of {@code this}
      * @param <U> type of the other successful result
-     *
      * @return the other successful result or the error of {@code this}
      */
-    default <U> Result<? extends U, ? extends E> andThen(Supplier<Result<? extends U, ? extends E>> f) {
+    default <U> Result<? extends U, ? extends E> andThen(Supplier<Result<? extends U,
+            ? extends E>> f) {
         return switch (this) {
             case Ok<T, E> ignored:
                 yield f.get();
@@ -394,14 +411,15 @@ public sealed interface Result<T, E> {
     }
 
     /**
-     * Returns {@code other} if the result is {@code Err<T, F>}, otherwise returns the {@code Ok<T, F>} value of {@code this}.
+     * Returns {@code other} if the result is {@code Err<T, F>}, otherwise returns the
+     * {@code Ok<T, F>} value of {@code this}.
      * <p>
-     * Arguments passed to {@code or()} are eagerly evaluated; if you are passing the result of a function call, it is recommended to use
-     * {@link Result#orThen(Supplier)}, which is lazily evaluated.
+     * Arguments passed to {@code or()} are eagerly evaluated; if you are passing the result of a
+     * function call, it is recommended to use {@link Result#orThen(Supplier)}, which is lazily
+     * evaluated.
      *
      * @param other the fallback result in case {@code this} is an {@code Err<T, E>}
      * @param <F>   type of the error of the other result
-     *
      * @return {@code this} if it is successful {@code other} otherwise
      */
     default <F> Result<T, F> or(Result<T, F> other) {
@@ -413,14 +431,15 @@ public sealed interface Result<T, E> {
         };
     }
 
+
     /**
-     * Calls f if the result is {@code Err<T, E>}, otherwise returns the {@code Ok<T, E>} value of {@code this}.
+     * Calls f if the result is {@code Err<T, E>}, otherwise returns the {@code Ok<T, E>} value of
+     * {@code this}.
      * <p>
      * This function can be used for control flow based on result values.
      *
      * @param f   provider of the fallback result in case {@code this} is an {@code Err<T, E>}
      * @param <F> type of the error of the other result
-     *
      * @return {@code this} if it is successful {@code other} otherwise
      */
     default <F> Result<? extends T, ? extends F> orThen(Supplier<Result<? extends T, ? extends F>> f) {
@@ -436,7 +455,7 @@ public sealed interface Result<T, E> {
         return new Err<>(error);
     }
 
-    static <T, E> Ok<T,E > ok(T result){
+    static <T, E> Ok<T, E> ok(T result) {
         return new Ok<>(result);
     }
 }
