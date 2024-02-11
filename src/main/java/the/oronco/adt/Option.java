@@ -47,6 +47,10 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
     }
 
     default boolean isSome() {
+
+        int out = switch ((Integer)1){
+            case Integer i -> 1;
+        };
         return switch (this) {
             case Some<T> ignored -> true;
             case None<T> ignored -> false;

@@ -1,6 +1,7 @@
 package the.oronco.iter;
 
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -163,7 +164,7 @@ public interface Iter<T> extends IntoIter<T, Iter<T>> {
 //    }
 
 
-    default <B, E, R extends Try<B, E>> R tryFold(final B init, BiFunction<B, ? super T, R> f) {
+    default <B, E, R extends Try<B, E>> R tryFold(final B init, BiFunction<B, T, R> f) {
         B accum = init;
         R value = null; // workaround for javas typ system
         while (this.next() instanceof Option.Some<T> some) {
@@ -179,9 +180,10 @@ public interface Iter<T> extends IntoIter<T, Iter<T>> {
         return value;
     }
 
-    default <E, F extends Function<? super T, Result<Void, E>>> Result<Void, E> tryForEach(F f) {
-        final BiFunction<Void, ? super T, Result<Void, E>> call = (ignored, x) -> f.apply(x);
-        return this.tryFold(null, call);
+    default <E, R extends Try<Void, E>> R tryForEach(Function<T, R> f) {
+        final Function<Function<T, R>, BiFunction<Void, T, R>> call = (fi) -> (ignored, x) -> fi.apply(x);
+
+        return this.tryFold(null, call.apply(f));
     }
 
     default <B> B fold(B init, BiFunction<? super B, ? super T, ? extends B> f) {
@@ -204,7 +206,7 @@ public interface Iter<T> extends IntoIter<T, Iter<T>> {
         };
     }
 
-    default <R extends Try<T, Option<T>>> Option<T> tryReduce(BiFunction<T, ? super T, R> f) {
+    default <R extends Try<T, Option<T>>> Option<T> tryReduce(BiFunction<T, T, R> f) {
         T first;
         switch (this.next()) {
             case Option.Some<T> some -> first = some.value();
@@ -317,6 +319,7 @@ public interface Iter<T> extends IntoIter<T, Iter<T>> {
 
         return reduce(fold.apply(compare));
     }
+
     default <B extends Comparable<B>> Option<T> minByKey(Function<T, B> keyGenerator) {
         Function<Function<T, B>, Function<T, Twople<B, T>>> key = (f) -> x -> new Twople<>(f.apply(x), x);
 
@@ -342,8 +345,104 @@ public interface Iter<T> extends IntoIter<T, Iter<T>> {
     }
 
 
-    default Cycle<T, Iter<T>> cycle(){
+    default Cycle<T, Iter<T>> cycle() {
         return new Cycle<>(this);
+    }
+
+    default ArrayChunks<T, Iter<T>> array_chunk(int n) {
+        return new ArrayChunks<>(this, n);
+    }
+
+    default <U, I extends IntoIter<U, Iter<U>>, F extends BiFunction<T, U, Integer>> Integer cmpBy(I other, F cmp) {
+        Function<BiFunction<T, U, Integer>, BiFunction<T, U, ControlFlow<Integer, Void>>> compare = (c) -> (x, y) -> switch (c.apply(x,
+                                                                                                                                     y)) {
+            case Integer i when i == 0 -> new Continue<>(null);
+            case Integer nonEq -> new Break<>(nonEq);
+        };
+
+        return switch (iterCompare(this, other.intoIter(), compare.apply(cmp))) {
+            case ControlFlow.Continue<Integer, Integer> ord -> ord.c();
+            case ControlFlow.Break<Integer, Integer> ord -> ord.b();
+        };
+    }
+
+    default <U, I extends IntoIter<U, Iter<U>>, F extends BiFunction<T, U, Option<Integer>>> Option<Integer> partialCmpBy(I other, F cmp) {
+        Function<BiFunction<T, U, Option<Integer>>, BiFunction<T, U, ControlFlow<Option<Integer>, Void>>> compare = (c) -> (x, y) -> switch (c.apply(
+                x,
+                y)) {
+            case Option.Some<Integer> some when some.value() == 0 -> new Continue<>(null);
+            case Option<Integer> nonEq -> new Break<>(nonEq);
+        };
+
+        return switch (iterCompare(this, other.intoIter(), compare.apply(cmp))) {
+            case ControlFlow.Continue<Option<Integer>, Integer> ord -> Option.some(ord.c());
+            case ControlFlow.Break<Option<Integer>, Integer> ord -> ord.b();
+        };
+    }
+
+
+    default <U, I extends IntoIter<U, Iter<U>>, F extends BiPredicate<T, U>> boolean eqBy(I other, F eq) {
+        Function<BiPredicate<T, U>, BiFunction<T, U, ControlFlow<Void, Void>>> compare = (eqi) -> (x, y) -> {
+            if (eqi.test(x, y)) {
+                return new Continue<>(null);
+            } else {
+                return new Break<>(null);
+            }
+        };
+
+        return switch (iterCompare(this, other.intoIter(), compare.apply(eq))) {
+            case ControlFlow.Continue<Void, Integer> ord -> ord.c() == 0; // TODO use custom Enum for equality
+            case ControlFlow.Break<Void, Integer> ignored -> false;
+        };
+    }
+
+    default <F extends BiFunction<T, T, Option<Integer>>> boolean isSortedBy(F compare) {
+        Option<T> next = this.next();
+
+        if (next instanceof Option.None<T>) {
+            return true;
+
+        } else if (next instanceof Option.Some<T> nextSome) {
+            final Object[] last = new Object[]{nextSome.value()};
+            BiFunction<T, BiFunction<T, T, Option<Integer>>, Predicate<T>> check = (lasti, compari) -> (curr) -> {
+
+                Option<Integer> compResult = compari.apply(lasti, curr);
+                if ((compResult instanceof Option.Some<Integer> some && some.value() > 0) || compResult instanceof Option.None<Integer>) {
+                    return false;
+                }
+
+                last[0] = curr;
+                return true;
+            };
+
+            //noinspection unchecked
+            return this.all(check.apply((T) last[0], compare));
+        } else {
+            throw new IllegalStateException("this should be unreachable!");
+        }
+    }
+
+    static <A, B, T> ControlFlow<T, Integer> iterCompare(Iter<A> a, Iter<B> b, BiFunction<A, B, ControlFlow<T, Void>> f) {
+        BiFunction<Iter<B>, BiFunction<A, B, ControlFlow<T, Void>>, Function<A, ControlFlow<ControlFlow<T, Integer>, Void>>> compare = (bi, fi) -> (x) -> {
+            switch (bi.next()) {
+                case Option.None<B> ignored -> {
+                    return new Break<>(new Continue<>(1)); // TODO implement custom Order to avoid hard coding ints
+                }
+                case Option.Some<B> some -> {
+                    return fi.apply(x, some.value())
+                             .mapBreak((Function<T, ControlFlow<T, Integer>>) Break::new);
+                }
+            }
+
+        };
+
+        return switch (a.tryForEach(compare.apply(b, f))) {
+            case ControlFlow.Continue<ControlFlow<T, Integer>, Void> ignored -> new Continue<>(switch (b.next()) {
+                case Option.None<B> ignored2 -> 0;
+                case Option.Some<B> ignored3 -> -1;
+            });
+            case ControlFlow.Break<ControlFlow<T, Integer>, Void> v -> v.b();
+        };
     }
 
 
