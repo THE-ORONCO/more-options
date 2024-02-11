@@ -28,14 +28,14 @@ import the.oronco.Rusty;
  *
  * @param <T>
  */
-public sealed interface Option<T> extends Rusty<Optional<T>> {
+public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infallible>> {
     None<?> NONE = new None<>();
 
     @ToString
     @EqualsAndHashCode
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
-    final class None<T> implements Option<T> {
-    }
+    final class None<T> implements Option<T> {}
+
     @ToString
     @EqualsAndHashCode
     final class Some<T> implements Option<T> {
@@ -394,9 +394,11 @@ public sealed interface Option<T> extends Rusty<Optional<T>> {
         return optional.map(Option::some)
                        .orElseGet(Option::none);
     }
+
     static <T> Option<T> of(T value) {
-        if (value == null)
+        if (value == null) {
             return none();
+        }
         return some(value);
     }
 
@@ -408,5 +410,12 @@ public sealed interface Option<T> extends Rusty<Optional<T>> {
     @SuppressWarnings("unchecked")
     static <T> Option<T> none() {
         return (Option<T>) NONE;
+    }
+
+    default ControlFlow<Option<Infallible>, T> branch() {
+        return switch (this) {
+            case Option.Some<T> some -> new ControlFlow.Continue<>(some.value);
+            case Option.None<T> ignored -> new ControlFlow.Break<>(none());
+        };
     }
 }

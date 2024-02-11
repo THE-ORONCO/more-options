@@ -1,17 +1,18 @@
 package the.oronco.iter;
 
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import the.oronco.adt.Option;
 
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
-public class Mapi< T, I extends Iter<T>, F extends Function<? super T, B>, B> implements Iter<B> {
-    private final I iter;
+public class Scan<T, S, F extends BiFunction<S, T, Option<B>>, B> implements Iter<T> {
+    private final Iter<T> iter;
+    private final S state;
     private final F f;
 
     @Override
-    public Option<B> next() {
+    public Option<T> next() {
         return null;
     }
 }

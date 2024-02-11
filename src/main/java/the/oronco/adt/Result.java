@@ -17,7 +17,7 @@ import the.oronco.Rusty;
 // TODO examples like in the rust documentation
 // TODO replace exceptions with better exceptions
 // TODO tests
-public sealed interface Result<T, E> extends Rusty<Optional<T>> {
+public sealed interface Result<T, E> extends Rusty<Optional<T>>, Try<T, Result<Infallible, E>> {
     @ToString
     @EqualsAndHashCode
     @AllArgsConstructor(access = AccessLevel.PRIVATE)
@@ -450,5 +450,12 @@ public sealed interface Result<T, E> extends Rusty<Optional<T>> {
 
     static <T, E> Ok<T, E> ok(T result) {
         return new Ok<>(result);
+    }
+
+    default ControlFlow<Result<Infallible, E>, T> branch() {
+        return switch (this) {
+            case Result.Ok<T, E> ok -> new ControlFlow.Continue<>(ok.result);
+            case Result.Err<T, E> err -> new ControlFlow.Break<>(err(err.error));
+        };
     }
 }
