@@ -1,5 +1,6 @@
 package the.oronco.adt;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -19,6 +20,9 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.ToString;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.data.util.Streamable;
+import the.oronco.Rusty;
 
 // TODO examples like in the rust documentation
 // TODO replace exceptions with better exceptions
@@ -30,7 +34,7 @@ import lombok.ToString;
  *
  * @param <T> Type of the value (needed for type save code)
  */
-public sealed interface MultiOption<T> {
+public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<T>, Serializable {
     None<?> NONE = new None<>();
 
     @ToString
@@ -53,7 +57,7 @@ public sealed interface MultiOption<T> {
     final class Many<T> implements MultiOption<T> {
         private final Collection<T> values;
 
-        public Many(Collection<T> values) {this.values = values;}
+        private Many(Collection<T> values) {this.values = values;}
 
         public Collection<T> values() {return values;}
     }
@@ -118,7 +122,8 @@ public sealed interface MultiOption<T> {
      *
      * @return the stream that contains the value of {@code Some<T>}  or {@code Many<T>} and is empty otherwise
      */
-    default Stream<T> stream() {
+    @Override
+    default @NotNull Stream<T> stream() {
         return switch (this) {
             case None<T> ignored -> Stream.of();
             case One<T> one -> Stream.of(one.value);
@@ -126,7 +131,8 @@ public sealed interface MultiOption<T> {
         };
     }
 
-    default Set<T> toSet() {
+    @Override
+    default @NotNull Set<T> toSet() {
         return switch (this) {
             case None<T> ignored -> Set.of();
             case One<T> one -> Set.of(one.value);
@@ -134,7 +140,8 @@ public sealed interface MultiOption<T> {
         };
     }
 
-    default List<T> toList() {
+    @Override
+    default @NotNull List<T> toList() {
         return switch (this) {
             case None<T> ignored -> List.of();
             case One<T> one -> List.of(one.value);
@@ -142,7 +149,8 @@ public sealed interface MultiOption<T> {
         };
     }
 
-    default Iterator<T> toIterator() {
+    @Override
+    default @NotNull Iterator<T> iterator() {
         return switch (this) {
             case None<T> ignored -> Collections.emptyIterator();
             case One<T> one -> Stream.of(one.value)
@@ -153,7 +161,7 @@ public sealed interface MultiOption<T> {
 
     default <C> C wrap(Function<? super Collection<T>, ? extends C> wrap) {
         return switch (this) {
-            case None<T> ignored -> wrap.apply(Collections.EMPTY_LIST);
+            case None<T> ignored -> wrap.apply((Collection<T>) Collections.EMPTY_LIST);
             case One<T> one -> wrap.apply(Collections.singleton(one.value));
             case Many<T> many -> wrap.apply(many.values);
         };
@@ -333,10 +341,40 @@ public sealed interface MultiOption<T> {
      *
      * @return a {@link MultiOption} according to the above rules
      */
-    static <T, I extends Iterator<T>> MultiOption<T> from(I unknownAmount) {
+    static <T> MultiOption<T> from(Iterator<T> unknownAmount) {
         ArrayList<T> accumulator = new ArrayList<>();
         while (unknownAmount.hasNext()) {
             accumulator.add(unknownAmount.next());
+        }
+        return from(accumulator);
+    }
+
+    /**
+     * Creates a MultiOption from an iterable of things according to the following rules:
+     * <table>
+     *   <tr>
+     *     <td>empty iterable</td>
+     *     <td>{@link None}</td>
+     *   </tr>
+     *   <tr>
+     *     <td>iterable with one element</td>
+     *    <td>{@link One}</td>
+     *   </tr>
+     *   <tr>
+     *     <td>iterable with multiple elements</td>
+     *     <td>{@link Many}</td>
+     *   </tr>
+     * </table>
+     *
+     * @param unknownAmount an iterable of unknown size that should be turned into a {@link MultiOption}
+     * @param <T>           type of the list elements
+     *
+     * @return a {@link MultiOption} according to the above rules
+     */
+    static <T> MultiOption<T> from(Iterable<T> unknownAmount) {
+        ArrayList<T> accumulator = new ArrayList<>();
+        for (T t : unknownAmount) {
+            accumulator.add(t);
         }
         return from(accumulator);
     }
@@ -391,11 +429,26 @@ public sealed interface MultiOption<T> {
                                                     .collect(Collectors.toSet()));
     }
 
+    /**
+     * Allows for this to be returned by Spring JPA repositories.
+     */
+    static <T> MultiOption<T> of(Streamable<T> streamable) {
+        return MultiOption.from(streamable);
+    }
     default int size() {
         return switch (this) {
             case None<T> ignored -> 0;
             case One<T> ignored -> 1;
             case Many<T> many -> many.values.size();
+        };
+    }
+
+    @Override
+    default Collection<T> j(){
+        return switch (this) {
+            case None<T> ignored -> Collections.emptyList();
+            case One<T> one -> Collections.singleton(one.value);
+            case Many<T> many -> many.values;
         };
     }
 

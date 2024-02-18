@@ -1,7 +1,10 @@
 package the.oronco.adt;
 
+import java.io.Serializable;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -11,12 +14,20 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.data.util.Streamable;
+import the.oronco.Rusty;
+import the.oronco.adt.ControlFlow.Break;
+import the.oronco.adt.ControlFlow.Continue;
 
-public sealed interface Result<T, E> {
+// TODO examples like in the rust documentation
+// TODO replace exceptions with better exceptions
+// TODO tests
+public sealed interface Result<T, E> extends Rusty<Optional<T>>, Try<T, Result<Infallible, E>>, Streamable<T>, Serializable {
     @ToString
     @EqualsAndHashCode
     @AllArgsConstructor(access = AccessLevel.PRIVATE)
-    final class Ok<T, E> implements Result<T, E> {
+    final class Ok<T, E>  implements Result<T, E> {
         private final T result;
         public T result() {return result;}
     }
@@ -31,10 +42,8 @@ public sealed interface Result<T, E> {
 
     default boolean isOk() {
         return switch (this) {
-            case Ok<T, E> ignored:
-                yield true;
-            case Err<T, E> ignored:
-                yield false;
+            case Ok<T, E> ignored -> true;
+            case Err<T, E> ignored -> false;
         };
     }
 
@@ -47,19 +56,15 @@ public sealed interface Result<T, E> {
      */
     default boolean isOkAnd(Predicate<? super T> predicate) {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield predicate.test(ok.result);
-            case Err<T, E> ignored:
-                yield false;
+            case Ok<T, E> ok -> predicate.test(ok.result);
+            case Err<T, E> ignored -> false;
         };
     }
 
     default boolean isErr() {
         return switch (this) {
-            case Ok<T, E> ignored:
-                yield false;
-            case Err<T, E> ignored:
-                yield true;
+            case Ok<T, E> ignored -> false;
+            case Err<T, E> ignored -> true;
         };
     }
 
@@ -72,10 +77,8 @@ public sealed interface Result<T, E> {
      */
     default boolean isErrAnd(Predicate<? super E> predicate) {
         return switch (this) {
-            case Ok<T, E> ignored:
-                yield false;
-            case Err<T, E> err:
-                yield predicate.test(err.error);
+            case Ok<T, E> ignored -> false;
+            case Err<T, E> err -> predicate.test(err.error);
         };
     }
 
@@ -86,10 +89,8 @@ public sealed interface Result<T, E> {
      */
     default Option<T> ok() {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield Option.some(ok.result);
-            case Err<T, E> ignored:
-                yield Option.none();
+            case Ok<T, E> ok -> Option.some(ok.result);
+            case Err<T, E> ignored -> Option.none();
         };
     }
 
@@ -100,10 +101,8 @@ public sealed interface Result<T, E> {
      */
     default Option<E> err() {
         return switch (this) {
-            case Ok<T, E> ignored:
-                yield Option.none();
-            case Err<T, E> err:
-                yield Option.some(err.error);
+            case Ok<T, E> ignored -> Option.none();
+            case Err<T, E> err -> Option.some(err.error);
         };
     }
 
@@ -120,10 +119,8 @@ public sealed interface Result<T, E> {
      */
     default <U> Result<U, E> map(Function<? super T, ? extends U> f) {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield ok(f.apply(ok.result));
-            case Err<T, E> err:
-                yield err(err.error);
+            case Ok<T, E> ok -> ok(f.apply(ok.result));
+            case Err<T, E> err -> err(err.error);
         };
     }
 
@@ -140,10 +137,8 @@ public sealed interface Result<T, E> {
      */
     default <U> U mapOr(U defaultValue, Function<? super T, ? extends U> f) {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield f.apply(ok.result);
-            case Err<T, E> ignored:
-                yield defaultValue;
+            case Ok<T, E> ok -> f.apply(ok.result);
+            case Err<T, E> ignored -> defaultValue;
         };
     }
 
@@ -161,10 +156,8 @@ public sealed interface Result<T, E> {
      */
     default <U> U mapOrElse(Function<? super E, ? extends U> d, Function<? super T, ? extends U> f) {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield f.apply(ok.result);
-            case Err<T, E> err:
-                yield d.apply(err.error);
+            case Ok<T, E> ok -> f.apply(ok.result);
+            case Err<T, E> err -> d.apply(err.error);
         };
     }
 
@@ -181,10 +174,8 @@ public sealed interface Result<T, E> {
      */
     default <U> Result<T, U> mapErr(Function<? super E, ? extends U> f) {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield ok(ok.result);
-            case Err<T, E> err:
-                yield err(f.apply(err.error));
+            case Ok<T, E> ok -> ok(ok.result);
+            case Err<T, E> err -> err(f.apply(err.error));
         };
     }
 
@@ -221,23 +212,31 @@ public sealed interface Result<T, E> {
         return this;
     }
 
+    @Override
+    default @NotNull Iterator<T> iterator() {
+        return switch (this) {
+            case Ok<T, E> ok -> Stream.of(ok.result)
+                                      .iterator();
+            case Err<T, E> ignored -> Collections.emptyIterator();
+        };
+    }
+
+    // TODO use custom iterator
     default Iterator<T> iter() {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield Stream.of(ok.result)
-                            .iterator();
-            case Err<T, E> ignored:
-                yield new Iterator<>() {
-                    @Override
-                    public boolean hasNext() {
-                        return false;
-                    }
+            case Ok<T, E> ok -> Stream.of(ok.result)
+                                      .iterator();
+            case Err<T, E> ignored -> new Iterator<>() {
+                @Override
+                public boolean hasNext() {
+                    return false;
+                }
 
-                    @Override
-                    public T next() {
-                        return null;
-                    }
-                };
+                @Override
+                public T next() {
+                    return null;
+                }
+            };
         };
     }
 
@@ -255,10 +254,8 @@ public sealed interface Result<T, E> {
      */
     default T expect(String message) throws NoSuchElementException {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield ok.result;
-            case Err<T, E> ignored:
-                throw new NoSuchElementException(message);
+            case Ok<T, E> ok -> ok.result;
+            case Err<T, E> ignored -> throw new NoSuchElementException(message);
         };
     }
 
@@ -274,10 +271,8 @@ public sealed interface Result<T, E> {
      */
     default T unwrap() throws NoSuchElementException {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield ok.result;
-            case Err<T, E> err:
-                throw new NoSuchElementException("Result was unwrapped but it was Err: %s".formatted(err.error));
+            case Ok<T, E> ok -> ok.result;
+            case Err<T, E> err -> throw new NoSuchElementException("Result was unwrapped but it was Err: %s".formatted(err.error));
         };
     }
 
@@ -293,10 +288,8 @@ public sealed interface Result<T, E> {
      */
     default T unwrapOr(T defaultValue) {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield ok.result;
-            case Err<T, E> ignored:
-                yield defaultValue;
+            case Ok<T, E> ok -> ok.result;
+            case Err<T, E> ignored -> defaultValue;
         };
     }
 
@@ -313,10 +306,8 @@ public sealed interface Result<T, E> {
 
     default T unwrapOrElse(Supplier<? extends T> defaultSupplier) {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield ok.result;
-            case Err<T, E> ignored:
-                yield defaultSupplier.get();
+            case Ok<T, E> ok -> ok.result;
+            case Err<T, E> ignored -> defaultSupplier.get();
         };
     }
 
@@ -331,10 +322,8 @@ public sealed interface Result<T, E> {
      */
     default E expectErr(String message) throws NoSuchElementException {
         return switch (this) {
-            case Ok<T, E> ignored:
-                throw new NoSuchElementException(message);
-            case Err<T, E> err:
-                yield err.error;
+            case Ok<T, E> ignored -> throw new NoSuchElementException(message);
+            case Err<T, E> err -> err.error;
         };
     }
 
@@ -347,10 +336,8 @@ public sealed interface Result<T, E> {
      */
     default E unwrapErr() throws NoSuchElementException {
         return switch (this) {
-            case Ok<T, E> ok:
-                throw new NoSuchElementException("Result was unwrapped but it was Ok: %s".formatted(ok.result));
-            case Err<T, E> err:
-                yield err.error;
+            case Ok<T, E> ok -> throw new NoSuchElementException("Result was unwrapped but it was Ok: %s".formatted(ok.result));
+            case Err<T, E> err -> err.error;
         };
     }
 
@@ -367,10 +354,8 @@ public sealed interface Result<T, E> {
      */
     default <U> Result<U, E> and(Result<U, E> other) {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield other;
-            case Err<T, E> err:
-                yield err(err.error);
+            case Ok<T, E> ok -> other;
+            case Err<T, E> err -> err(err.error);
         };
     }
 
@@ -386,10 +371,8 @@ public sealed interface Result<T, E> {
      */
     default <U> Result<? extends U, ? extends E> andThen(Supplier<Result<? extends U, ? extends E>> f) {
         return switch (this) {
-            case Ok<T, E> ignored:
-                yield f.get();
-            case Err<T, E> err:
-                yield err(err.error);
+            case Ok<T, E> ignored -> f.get();
+            case Err<T, E> err -> err(err.error);
         };
     }
 
@@ -406,10 +389,8 @@ public sealed interface Result<T, E> {
      */
     default <F> Result<T, F> or(Result<T, F> other) {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield ok(ok.result);
-            case Err<T, E> ignored:
-                yield other;
+            case Ok<T, E> ok -> ok(ok.result);
+            case Err<T, E> ignored -> other;
         };
     }
 
@@ -425,18 +406,46 @@ public sealed interface Result<T, E> {
      */
     default <F> Result<? extends T, ? extends F> orThen(Supplier<Result<? extends T, ? extends F>> f) {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield ok(ok.result);
-            case Err<T, E> ignored:
-                yield f.get();
+            case Ok<T, E> ok -> ok(ok.result);
+            case Err<T, E> ignored -> f.get();
         };
+    }
+
+    @Override
+    default Optional<T> j() {
+        return Optional.ofNullable(this.unwrapOr(null));
     }
 
     static <T, E> Err<T, E> err(E error) {
         return new Err<>(error);
     }
 
-    static <T, E> Ok<T,E > ok(T result){
+    static <T, E> Ok<T, E> ok(T result) {
         return new Ok<>(result);
+    }
+
+    static <T, E> Result<T, E> from(T value, E error) {
+        return switch (Option.from(value)) {
+            case Option.None<T> ignored -> err(error);
+            case Option.Some<T> some -> ok(some.value());
+        };
+    }
+
+    /**
+     * Allows for this to be returned by Spring JPA repositories.
+     */
+    static <T> Result<Iterable<T>, Exception> of(Streamable<T> streamable) {
+        return switch (MultiOption.of(streamable)) {
+            case MultiOption.Many<T> many -> ok(many.values());
+            case MultiOption.None<T> ignored -> err(new NoSuchElementException("No Element found in stream!"));
+            case MultiOption.One<T> one -> ok(Collections.singleton(one.value()));
+        };
+    }
+
+    default ControlFlow<Result<Infallible, E>, T> branch() {
+        return switch (this) {
+            case Result.Ok<T, E> ok -> new Continue<>(ok.result);
+            case Result.Err<T, E> err -> new Break<>(err(err.error));
+        };
     }
 }

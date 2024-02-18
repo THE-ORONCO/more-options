@@ -1,6 +1,7 @@
 package the.oronco.adt;
 
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -15,6 +16,9 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.ToString;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.data.util.Streamable;
+import the.oronco.Rusty;
 
 // TODO examples like in the rust documentation
 // TODO replace exceptions with better exceptions
@@ -28,14 +32,14 @@ import lombok.ToString;
  *
  * @param <T>
  */
-public sealed interface Option<T> {
+public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infallible>>, Streamable<T>, Serializable {
     None<?> NONE = new None<>();
 
     @ToString
     @EqualsAndHashCode
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
-    final class None<T> implements Option<T> {
-    }
+    final class None<T> implements Option<T> {}
+
     @ToString
     @EqualsAndHashCode
     final class Some<T> implements Option<T> {
@@ -79,6 +83,7 @@ public sealed interface Option<T> {
      *
      * @return the stream that contains the value of {@code Some<T>} and is empty otherwise
      */
+    @NotNull
     default Stream<T> stream() {
         return switch (this) {
             case Some<T> some -> Stream.of(some.value);
@@ -269,6 +274,16 @@ public sealed interface Option<T> {
         };
     }
 
+    @Override
+    @NotNull
+    default Iterator<T> iterator() {
+        return switch (this) {
+            case Some<T> some -> Stream.of(some.value)
+                                       .iterator();
+            case None<T> ignored -> Collections.emptyIterator();
+        };
+    }
+
     /**
      * Returns {@code None} if the {@code Option<T>} is {@code None}, otherwise returns {@code other}.
      * <p>
@@ -321,7 +336,8 @@ public sealed interface Option<T> {
      *
      * @return an option that is either {@code Some<T>} and conforms to the {@code Predicate<? super T>} or {@code None<T>}
      */
-    default Option<T> filter(Predicate<? super T> predicate) {
+    @Override
+    default @NotNull Option<T> filter(@NotNull Predicate<? super T> predicate) {
         if (this instanceof Some<T> some) {
             if (predicate.test(some.value)) {
                 return some(some.value);
@@ -383,6 +399,16 @@ public sealed interface Option<T> {
      *
      * @return an optional containing the value of the option
      */
+    @Override
+    default Optional<T> j() {
+        return toOptional();
+    }
+
+    /**
+     * Creates a Java {@link Optional} out of the option.
+     *
+     * @return an optional containing the value of the option
+     */
     default Optional<T> toOptional() {
         return switch (this) {
             case Some<T> some -> Optional.of(some.value);
@@ -390,15 +416,29 @@ public sealed interface Option<T> {
         };
     }
 
-    static <T> Option<T> optionOf(@SuppressWarnings("OptionalUsedAsFieldOrParameterType") Optional<T> optional) {
+    static <T> Option<T> optionFrom(@SuppressWarnings("OptionalUsedAsFieldOrParameterType") Optional<T> optional) {
         return optional.map(Option::some)
                        .orElseGet(Option::none);
     }
-    static <T> Option<T> of(T value) {
-        if (value == null)
+
+    static <T> Option<T> from(T value) {
+        if (value == null) {
             return none();
+        }
         return some(value);
     }
+
+    /**
+     * Allows for this to be returned by Spring JPA repositories.
+     */
+    static <T> Option<T> of(Streamable<T> streamable) {
+        return switch (MultiOption.of(streamable)) {
+            case MultiOption.Many<T> ignored -> none();
+            case MultiOption.None<T> ignored -> none();
+            case MultiOption.One<T> one -> some(one.value());
+        };
+    }
+
 
     static <T> Option<T> some(T value) {
         return new Some<>(value);
@@ -408,5 +448,13 @@ public sealed interface Option<T> {
     @SuppressWarnings("unchecked")
     static <T> Option<T> none() {
         return (Option<T>) NONE;
+    }
+
+    @Override
+    default ControlFlow<Option<Infallible>, T> branch() {
+        return switch (this) {
+            case Option.Some<T> some -> new ControlFlow.Continue<>(some.value);
+            case Option.None<T> ignored -> new ControlFlow.Break<>(none());
+        };
     }
 }
