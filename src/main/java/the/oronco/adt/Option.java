@@ -6,12 +6,8 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
-
 import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -20,6 +16,10 @@ import lombok.ToString;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.data.util.Streamable;
 import the.oronco.Rusty;
+import the.oronco.adt.nonnulllambdas.NotNullConsumer;
+import the.oronco.adt.nonnulllambdas.NotNullMapper;
+import the.oronco.adt.nonnulllambdas.NotNullPredicate;
+import the.oronco.adt.nonnulllambdas.NotNullSupplier;
 
 // TODO examples like in the rust documentation
 // TODO replace exceptions with better exceptions
@@ -34,7 +34,8 @@ import the.oronco.Rusty;
  *
  * @param <T>
  */
-public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infallible>>, Streamable<T>, Serializable {
+public sealed interface Option<T>
+        extends Rusty<Optional<T>>, Try<T, Option<Infallible>>, Streamable<T>, Serializable {
     None<?> NONE = new None<>();
 
     @ToString
@@ -45,13 +46,13 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
     @ToString
     @EqualsAndHashCode
     final class Some<T> implements Option<T> {
-        private final T value;
+        private final @NotNull T value;
 
-        private Some(@NonNull T value) {
+        private Some(@NotNull @NonNull T value) {
             this.value = value;
         }
 
-        public T value() {
+        public @NotNull T value() {
             return value;
         }
     }
@@ -75,9 +76,10 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
      *
      * @param predicate predicate to evaluate the value against if the {@code Option<T>} is
      *                  {@code Some<T>}
+     *
      * @return if the value exists && the predicate matches
      */
-    default boolean isSomeAnd(Predicate<? super T> predicate) {
+    default boolean isSomeAnd(@NotNull @NonNull NotNullPredicate<? super T> predicate) {
         return switch (this) {
             case Some<T> some -> predicate.test(some.value);
             case None<T> ignored -> false;
@@ -90,8 +92,7 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
      *
      * @return the stream that contains the value of {@code Some<T>} and is empty otherwise
      */
-    @NotNull
-    default Stream<T> stream() {
+    default @NotNull Stream<T> stream() {
         return switch (this) {
             case Some<T> some -> Stream.of(some.value);
             case None<T> ignored -> Stream.of();
@@ -101,14 +102,47 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
     /**
      * @param errorMessage the error message that is thrown when the {@code Option<T>} is
      *                     {@code None<T>}
+     *
      * @return the value if the {@code Option<T>} is {@code Some<T>}
+     *
      * @throws NoSuchElementException with the given Error message when the {@code Option<T>} is
      *                                {@code None<T>}
      */
-    default T expect(String errorMessage) throws NoSuchElementException {
+    default @NotNull T expect(String errorMessage) throws NoSuchElementException {
         return switch (this) {
             case Some<T> some -> some.value;
             case None<T> ignored -> throw new NoSuchElementException(errorMessage);
+        };
+    }
+
+    /**
+     * @param errorMessage the Exception that is thrown when the {@code Option<T>} is
+     *                     {@code None<T>}
+     *
+     * @return the value if the {@code Option<T>} is {@code Some<T>}
+     *
+     * @throws E with the given Exception when the {@code Option<T>} is {@code None<T>}
+     */
+    default @NotNull <E extends Exception> T expect(@NonNull E errorMessage) throws E {
+        return switch (this) {
+            case Some<T> some -> some.value;
+            case None<T> ignored -> throw errorMessage;
+        };
+    }
+
+    /**
+     * @param exceptionSupplier supplier that returns the Exception that is thrown when the
+     *                          {@code Option<T>} is {@code None<T>}
+     *
+     * @return the value if the {@code Option<T>} is {@code Some<T>}
+     *
+     * @throws E with the given Exception when the {@code Option<T>} is {@code None<T>}
+     */
+    default @NotNull <E extends Exception> T expect(@NotNull @NonNull NotNullSupplier<E> exceptionSupplier) throws
+                                                                                                            E {
+        return switch (this) {
+            case Some<T> some -> some.value;
+            case None<T> ignored -> throw exceptionSupplier.get();
         };
     }
 
@@ -118,29 +152,30 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
      * <p>
      * The usage of this method is discouraged as control flow through exceptions can be hard to
      * understand and organize. Use {@link Option#unwrapOr(Object)} or
-     * {@link Option#unwrapOrElse(Supplier)} instead.
+     * {@link Option#unwrapOrElse(NotNullSupplier)} instead.
      *
      * @return the value if the {@code Option<T>} is {@code Some<T>}
+     *
      * @throws NoSuchElementException when the {@code Option<T>} is {@code None<T>}
      */
-    default T unwrap() throws NoSuchElementException {
+    default @NotNull T unwrap() throws NoSuchElementException {
         return switch (this) {
             case Some<T> some -> some.value;
-            case None<T> ignored -> throw new NoSuchElementException(
-                    "Option was unwrapped but it had no value!");
+            case None<T> ignored ->
+                    throw new NoSuchElementException("Option was unwrapped but it had no value!");
         };
     }
 
     /**
      * Returns the contained {@code Some<T>} value and a default value otherwise.<p> Arguments
      * passed to {@link Option#unwrapOr(T)} are eagerly evaluated; if you are passing the result of
-     * a function call, it is recommended to use {@link Option#unwrapOrElse(Supplier)}, which is
-     * lazily evaluated.
+     * a function call, it is recommended to use {@link Option#unwrapOrElse(NotNullSupplier)}, which
+     * is lazily evaluated.
      *
      * @param defaultValue default value that should be returned in the case that {@code Option<T>}
      *                     is {@code None<T>}
-     * @return the value if the {@code Option<T>} is {@code Some<T>} and the default value
-     *         otherwise
+     *
+     * @return the value if the {@code Option<T>} is {@code Some<T>} and the default value otherwise
      */
     default T unwrapOr(T defaultValue) {
         return switch (this) {
@@ -154,9 +189,10 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
      * {@code Supplier<T>}.
      *
      * @param supplier the supplier that computes the value if {@code Option<T>} is {@code None<T>}
+     *
      * @return the value in {@code Some<T>} or the result of the {@code Supplier<T>}
      */
-    default T unwrapOrElse(Supplier<? extends T> supplier) {
+    default T unwrapOrElse(@NotNull @NonNull NotNullSupplier<? extends T> supplier) {
         return switch (this) {
             case Some<T> some -> some.value;
             case None<T> ignored -> supplier.get();
@@ -169,11 +205,12 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
      *
      * @param f   function that converts {@code T} to {@code R}
      * @param <R> type that the value of a {@code Some<T>} should be converted to
+     *
      * @return a new {@code Option<R>} with the converted value
      */
-    default <R> Option<R> map(Function<? super T, ? extends R> f) {
+    default <R> @NotNull Option<R> map(@NotNull @NonNull NotNullMapper<? super T, ? extends R> f) {
         return switch (this) {
-            case Some<T> some -> some(f.apply(some.value));
+            case Some<T> some -> some(f.map(some.value));
             case None<T> ignored -> none();
         };
     }
@@ -188,11 +225,12 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
      * </pre>
      *
      * @param consumer function that accepts the value (if {@code Some<T>})
+     *
      * @return the {@code Option<T>} it was called on
      */
-    default Option<T> inspect(Consumer<? super T> consumer) {
+    default @NotNull Option<T> inspect(@NotNull @NonNull NotNullConsumer<? super T> consumer) {
         if (this instanceof Some<T> some) {
-            consumer.accept(some.value);
+            consumer.consume(some.value);
         }
         return this;
     }
@@ -201,52 +239,56 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
      * Returns the provided default result (if {@code None<T>}), or applies a {@code Fuction<T,R>}
      * to the contained value (if {@code Some}).
      * <p>
-     * Arguments passed to {@link Option#mapOr(Object, Function)} are eagerly evaluated; if you are
-     * passing the result of a function call, it is recommended to use
-     * {@link Option#mapOrElse(Supplier, Function)}, which is lazily evaluated.
+     * Arguments passed to {@link Option#mapOr(Object, NotNullMapper)} are eagerly evaluated; if you
+     * are passing the result of a function call, it is recommended to use
+     * {@link Option#mapOrElse(NotNullSupplier, NotNullMapper)}, which is lazily evaluated.
      *
      * @param defaultValue default value that is returned if {@code None<T>}
      * @param f            function that converts the value in case of {@code Some<T>}
      * @param <R>          the target type that should be mapped to
+     *
      * @return the mapped value or the default value if {@code None<T>}
      */
-    default <R> R mapOr(R defaultValue, Function<? super T, ? extends R> f) {
+    default <R> R mapOr(R defaultValue, @NotNull @NonNull NotNullMapper<? super T, ? extends R> f) {
         return switch (this) {
-            case Some<T> some -> f.apply(some.value);
+            case Some<T> some -> f.map(some.value);
             case None<T> ignored -> defaultValue;
         };
     }
 
     /**
-     * + Computes a default function result (if {@code None}), or applies a different function to
-     * the contained value (if {@code Some}).
+     * Computes a default function result (if {@code None}), or applies a different function to the
+     * contained value (if {@code Some}).
      *
      * @param defaultSupplier {@code Supplier<? extends R>} that supplies a value if {@code None}
      * @param f               function that converts the value in case of {@code Some<T>}
      * @param <R>             the target type that should be mapped to
+     *
      * @return the mapped value or the default value if {@code None}
      */
-    default <R> R mapOrElse(
-            Supplier<? extends R> defaultSupplier, Function<? super T, ? extends R> f) {
+    default <R> R mapOrElse(@NotNull @NonNull NotNullSupplier<? extends R> defaultSupplier,
+                            @NotNull @NonNull NotNullMapper<? super T, ? extends R> f) {
         return switch (this) {
-            case Some<T> some -> f.apply(some.value);
+            case Some<T> some -> f.map(some.value);
             case None<T> ignored -> defaultSupplier.get();
         };
     }
+
 
     /**
      * Transforms the {@code Option<T>} into a {@code Result<T, E>}, mapping {@code Some(v)} to
      * {@code Ok(v)} and {@code None} to {@code Err(err)}.
      * <p>
      * Arguments passed to {@link Option#okOr(Object)} are eagerly evaluated; if you are passing the
-     * result of a function call, it is recommended to use {@link Option#okOrElse(Supplier)}, which
-     * is lazily evaluated.
+     * result of a function call, it is recommended to use {@link Option#okOrElse(NotNullSupplier)},
+     * which is lazily evaluated.
      *
-     * @param err error value that should be returned
+     * @param err error value that should be returned.
      * @param <E> type of the error that should be returned
+     *
      * @return a result representing the {@code Option<T>} in form of a {@code Result<T, E>}
      */
-    default <E> Result<T, E> okOr(E err) {
+    default <E> @NotNull Result<T, E> okOr(@NotNull @NonNull E err) {
         return switch (this) {
             case Some<T> some -> Result.ok(some.value);
             case None<T> ignored -> Result.err(err);
@@ -259,9 +301,10 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
      *
      * @param err a {@code Supplier<E>} of the error value that should be returned
      * @param <E> type of the error that should be returned
+     *
      * @return a result representing the {@code Option<T>} in form of a {@code Result<T, E>}
      */
-    default <E> Result<T, E> okOrElse(Supplier<? extends E> err) {
+    default <E> @NotNull Result<T, E> okOrElse(@NotNull @NonNull NotNullSupplier<? extends E> err) {
         return switch (this) {
             case Some<T> some -> Result.ok(some.value);
             case None<T> ignored -> Result.err(err.get());
@@ -275,7 +318,7 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
      *
      * @return an {@code Iterator<T>} over the possibly contained value
      */
-    default Iterator<T> iter() {
+    default @NotNull Iterator<T> iter() {
         return switch (this) {
             case Some<T> some -> Stream.of(some.value)
                                        .iterator();
@@ -284,8 +327,7 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
     }
 
     @Override
-    @NotNull
-    default Iterator<T> iterator() {
+    default @NotNull Iterator<T> iterator() {
         return switch (this) {
             case Some<T> some -> Stream.of(some.value)
                                        .iterator();
@@ -298,13 +340,15 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
      * {@code other}.
      * <p>
      * Arguments passed to and are eagerly evaluated; if you are passing the result of a function
-     * call, it is recommended to use {@link Option#andThen(Function)}, which is lazily evaluated.
+     * call, it is recommended to use {@link Option#andThen(NotNullMapper)}, which is lazily
+     * evaluated.
      *
      * @param other other {@code Option<U>} that should be returned when this is {@code Some<T>}
      * @param <U>   type of the other optional
+     *
      * @return either the {@code other} {@code Option<U>} or {@code None} when this is {@code None}
      */
-    default <U> Option<U> and(Option<U> other) {
+    default <U> @NotNull Option<U> and(@NotNull @NonNull Option<U> other) {
         return switch (this) {
             case Some<T> ignored -> other;
             case None<T> ignored -> none();
@@ -319,12 +363,13 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
      *
      * @param other another optional that should be returned when this is {@code Some<T>}
      * @param <U>   type of the other optional
+     *
      * @return either the result of {@code other(some.value)} or {@code None} when this is
-     *         {@code None}
+     * {@code None}
      */
-    default <U> Option<? extends U> andThen(Function<? super T, Option<? extends U>> other) {
+    default <U> @NotNull Option<? extends U> andThen(@NotNull @NonNull NotNullMapper<? super T, Option<? extends U>> other) {
         return switch (this) {
-            case Some<T> some -> other.apply(some.value);
+            case Some<T> some -> other.map(some.value);
             case None<T> ignored -> none();
         };
     }
@@ -344,11 +389,12 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
      * you decide which elements to keep.
      *
      * @param predicate predicate to filter the value on if it is {@code Some<T>}
+     *
      * @return an option that is either {@code Some<T>} and conforms to the
-     *         {@code Predicate<? super T>} or {@code None<T>}
+     * {@code Predicate<? super T>} or {@code None<T>}
      */
     @Override
-    default @NotNull Option<T> filter(@NotNull Predicate<? super T> predicate) {
+    default @NotNull Option<T> filter(@NotNull @NonNull Predicate<? super @NotNull T> predicate) {
         if (this instanceof Some<T> some) {
             if (predicate.test(some.value)) {
                 return some(some.value);
@@ -361,14 +407,16 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
      * Returns the {@code Option<T>} if it contains a value, otherwise returns {@code other}.
      * <p>
      * Arguments passed to or are eagerly evaluated; if you are passing the result of a function
-     * call, it is recommended to use {@link Option#orElse(Supplier)}, which is lazily evaluated.
+     * call, it is recommended to use {@link Option#orElse(NotNullSupplier)}, which is lazily
+     * evaluated.
      *
      * @param other the other {@code Option<T>} that should be returned instead if {@code this} is
      *              {@code None<T>}
+     *
      * @return an {@code Option<T>} that is either {@code this} or the {@code other}
-     *         {@code Option<T>}
+     * {@code Option<T>}
      */
-    default Option<T> or(Option<T> other) {
+    default @NotNull Option<T> or(@NotNull @NonNull Option<T> other) {
         return switch (this) {
             case Some<T> some -> some(some.value);
             case None<T> ignored -> other;
@@ -381,14 +429,16 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
      * {@code None<T>}.
      * <p>
      * Arguments passed to or are eagerly evaluated; if you are passing the result of a function
-     * call, it is recommended to use {@link Option#orNullableElse(Supplier)}, which is lazily evaluated.
+     * call, it is recommended to use {@link Option#orNullableElse(NotNullSupplier)}, which is
+     * lazily evaluated.
      *
      * @param other the other {@code Option<T>} that should be returned instead if {@code this} is
      *              {@code None<T>}
+     *
      * @return an {@code Option<T>} that is either {@code this} or the {@code other} wrapped in an
-     *         {@code Option<T>}
+     * {@code Option<T>}
      */
-    default Option<T> orNullable(T other) {
+    default @NotNull Option<T> orNullable(@NotNull @NonNull T other) {
         return switch (this) {
             case Some<T> some -> some(some.value);
             case None<T> ignored -> Option.from(other);
@@ -401,10 +451,11 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
      *
      * @param other a {@code Supplier} that provides the {@code other} {@code Option<T>} in case
      *              that {@code this} is {@code None<T>}
+     *
      * @return the {@code Option<T>} if it contains a value, otherwise calls the {@code Supplier}
-     *         and returns the result
+     * and returns the result
      */
-    default <S extends T> Option<? extends T> orElse(Supplier<Option<S>> other) {
+    default <S extends T> @NotNull Option<? extends T> orElse(@NotNull @NonNull NotNullSupplier<Option<S>> other) {
         return switch (this) {
             case Some<T> some -> some(some.value);
             case None<T> ignored -> other.get();
@@ -412,15 +463,16 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
     }
 
     /**
-     * Returns the option if it contains a value, otherwise calls f and returns the result
-     * wrapped into an option.
+     * Returns the option if it contains a value, otherwise calls f and returns the result wrapped
+     * into an option.
      *
      * @param other a {@code Supplier} that provides the {@code other} {@code Option<T>} in case
      *              that {@code this} is {@code None<T>}
+     *
      * @return the {@code Option<T>} if it contains a value, otherwise calls the {@code Supplier}
-     *         and returns the result in an {@code Option<T>}
+     * and returns the result in an {@code Option<T>}
      */
-    default <S extends T> Option<T> orNullableElse(Supplier<S> other) {
+    default <S extends T> @NotNull Option<T> orNullableElse(@NotNull @NonNull NotNullSupplier<S> other) {
         return switch (this) {
             case Some<T> some -> some(some.value);
             case None<T> ignored -> Option.from(other.get());
@@ -432,9 +484,10 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
      * otherwise returns {@code None<T>}.
      *
      * @param other the other {@code Option<T>}
+     *
      * @return an {Option<T>} according to the above condition
      */
-    default Option<T> xOr(Option<T> other) {
+    default @NotNull Option<T> xOr(@NotNull @NonNull Option<T> other) {
         if (this instanceof Some<T> some && !(other instanceof Some<T>)) {
             return some(some.value);
         } else if (!(this instanceof Some<T>) && other instanceof Some<T> some) {
@@ -450,7 +503,7 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
      * @return an optional containing the value of the option
      */
     @Override
-    default Optional<T> j() {
+    default @NotNull Optional<T> j() {
         return toOptional();
     }
 
@@ -459,19 +512,20 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
      *
      * @return an optional containing the value of the option
      */
-    default Optional<T> toOptional() {
+    default @NotNull Optional<T> toOptional() {
         return switch (this) {
             case Some<T> some -> Optional.of(some.value);
             case None<T> ignored -> Optional.empty();
         };
     }
 
-    static <T> Option<T> optionFrom(@SuppressWarnings("OptionalUsedAsFieldOrParameterType") Optional<T> optional) {
+    static <T> @NotNull Option<T> optionFrom(@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+                                             @NotNull @NonNull Optional<T> optional) {
         return optional.map(Option::some)
                        .orElseGet(Option::none);
     }
 
-    static <T> Option<T> from(T value) {
+    static <T> @NotNull Option<T> from(T value) {
         if (value == null) {
             return none();
         }
@@ -481,7 +535,7 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
     /**
      * Allows for this to be returned by Spring JPA repositories.
      */
-    static <T> Option<T> of(Streamable<T> streamable) {
+    static <T> @NotNull Option<T> of(@NotNull @NonNull Streamable<T> streamable) {
         return switch (MultiOption.of(streamable)) {
             case MultiOption.Many<T> ignored -> none();
             case MultiOption.None<T> ignored -> none();
@@ -490,18 +544,18 @@ public sealed interface Option<T> extends Rusty<Optional<T>>, Try<T, Option<Infa
     }
 
 
-    static <T> Option<T> some(T value) {
+    static <T> @NotNull Option<T> some(@NotNull T value) {
         return new Some<>(value);
     }
 
     // TODO think of the potential memory problems that multiple NONE-Objects may cause
     @SuppressWarnings("unchecked")
-    static <T> Option<T> none() {
+    static <T> @NotNull Option<T> none() {
         return (Option<T>) NONE;
     }
 
     @Override
-    default ControlFlow<Option<Infallible>, T> branch() {
+    default @NotNull ControlFlow<Option<Infallible>, T> branch() {
         return switch (this) {
             case Option.Some<T> some -> new ControlFlow.Continue<>(some.value);
             case Option.None<T> ignored -> new ControlFlow.Break<>(none());

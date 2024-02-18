@@ -1,6 +1,7 @@
 package the.oronco.adt;
 
 import java.util.function.Function;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Describes a control flow through the type system. This allows (if the compiler is clever which in java it isn't) for highly optimized
