@@ -15,6 +15,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -26,7 +27,8 @@ import the.oronco.Rusty;
 
 // TODO examples like in the rust documentation
 // TODO replace exceptions with better exceptions
-// TODO change naming scheme to be more java like (e.g. .unwrapOr -> .orElse, .unwrapOrElse -> .orElseGet)
+// TODO change naming scheme to be more java like (e.g. .unwrapOr -> .orElse, .unwrapOrElse ->
+//  .orElseGet)
 // TODO tests
 
 /**
@@ -40,16 +42,21 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
     @ToString
     @EqualsAndHashCode
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
-    final class None<T> implements MultiOption<T> {}
+    final class None<T> implements MultiOption<T> {
+    }
 
     @ToString
     @EqualsAndHashCode
     final class One<T> implements MultiOption<T> {
         private final T value;
 
-        private One(@NonNull T value) {this.value = value;}
+        private One(@NonNull T value) {
+            this.value = value;
+        }
 
-        public T value() {return value;}
+        public T value() {
+            return value;
+        }
     }
 
     @ToString
@@ -57,9 +64,13 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
     final class Many<T> implements MultiOption<T> {
         private final Collection<T> values;
 
-        private Many(Collection<T> values) {this.values = values;}
+        private Many(Collection<T> values) {
+            this.values = values;
+        }
 
-        public Collection<T> values() {return values;}
+        public Collection<T> values() {
+            return values;
+        }
     }
 
     default boolean isNone() {
@@ -79,10 +90,11 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
     }
 
     /**
-     * Returns true if the {@code MultiOption<T>} is a {@code One<T>} and the value inside it matches a predicate.
+     * Returns true if the {@code MultiOption<T>} is a {@code One<T>} and the value inside it
+     * matches a predicate.
      *
-     * @param predicate predicate to evaluate the value against if the {@code MultiOption<T>} is {@code One<T>}
-     *
+     * @param predicate predicate to evaluate the value against if the {@code MultiOption<T>} is
+     *                  {@code One<T>}
      * @return if the value exists && the predicate matches
      */
     default boolean isOneAnd(Predicate<? super T> predicate) {
@@ -102,10 +114,11 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
     }
 
     /**
-     * Returns true if the {@code MultiOption<T>} is a {@code Many<T>} and the value inside it matches a predicate.
+     * Returns true if the {@code MultiOption<T>} is a {@code Many<T>} and the value inside it
+     * matches a predicate.
      *
-     * @param predicate predicate to evaluate the value against if the {@code MultiOption<T>} is {@code Many<T>}
-     *
+     * @param predicate predicate to evaluate the value against if the {@code MultiOption<T>} is
+     *                  {@code Many<T>}
      * @return if the value exists && the predicate matches
      */
     default boolean isManyAnd(Predicate<? super Collection<T>> predicate) {
@@ -117,10 +130,11 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
     }
 
     /**
-     * Creates a {@link Stream} from the {@code MultiOption<T>} that contains the values of {@code One<T>} or {@code Many<T>} and is empty
-     * otherwise.
+     * Creates a {@link Stream} from the {@code MultiOption<T>} that contains the values of
+     * {@code One<T>} or {@code Many<T>} and is empty otherwise.
      *
-     * @return the stream that contains the value of {@code Some<T>}  or {@code Many<T>} and is empty otherwise
+     * @return the stream that contains the value of {@code Some<T>}  or {@code Many<T>} and is
+     *         empty otherwise
      */
     @Override
     default @NotNull Stream<T> stream() {
@@ -168,11 +182,11 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
     }
 
     /**
-     * @param errorMessage the error message that is thrown when the {@code Option<T>} is {@code None<T>}
-     *
+     * @param errorMessage the error message that is thrown when the {@code Option<T>} is
+     *                     {@code None<T>}
      * @return the value if the {@code Option<T>} is {@code Some<T>}
-     *
-     * @throws NoSuchElementException with the given Error message when the {@code Option<T>} is {@code None<T>}
+     * @throws NoSuchElementException with the given Error message when the {@code Option<T>} is
+     *                                {@code None<T>}
      */
     default Collection<T> expect(String errorMessage) throws NoSuchElementException {
         return switch (this) {
@@ -183,32 +197,35 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
     }
 
     /**
-     * Returns the contained {@code One<T>} value or {@code Many<T>} values and throws otherwise. (Similar to
-     * {@link MultiOption#expect(String)} but, without a custom error message)
+     * Returns the contained {@code One<T>} value or {@code Many<T>} values and throws otherwise.
+     * (Similar to {@link MultiOption#expect(String)} but, without a custom error message)
      * <p>
-     * The usage of this method is discouraged as control flow through exceptions can be hard to understand and organize. Use
-     * {@link MultiOption#unwrapOr(Collection)} or {@link MultiOption#unwrapOrElse(Supplier)} instead.
+     * The usage of this method is discouraged as control flow through exceptions can be hard to
+     * understand and organize. Use {@link MultiOption#unwrapOr(Collection)} or
+     * {@link MultiOption#unwrapOrElse(Supplier)} instead.
      *
      * @return the value(s) if the {@code MultiOption<T>} is {@code One<T>} or {@code Many<T>}
-     *
      * @throws NoSuchElementException when the {@code MultiOption<T>} is {@code None<T>}
      */
     default Collection<T> unwrap() throws NoSuchElementException {
         return switch (this) {
-            case None<T> ignored -> throw new NoSuchElementException("Option was unwrapped but it had no value!");
+            case None<T> ignored -> throw new NoSuchElementException(
+                    "Option was unwrapped but it had no value!");
             case One<T> one -> new ArrayList<>(Collections.singleton(one.value));
             case Many<T> many -> new ArrayList<>(many.values);
         };
     }
 
     /**
-     * Returns the contained {@code One<T>} value or {@Many} values and a default value otherwise.<p> Arguments passed to
-     * {@link MultiOption#unwrapOr(Collection)} are eagerly evaluated; if you are passing the result of a function call, it is recommended
-     * to use {@link MultiOption#unwrapOrElse(Supplier)}, which is lazily evaluated.
+     * Returns the contained {@code One<T>} value or {@Many} values and a default value
+     * otherwise.<p> Arguments passed to {@link MultiOption#unwrapOr(Collection)} are eagerly
+     * evaluated; if you are passing the result of a function call, it is recommended to use
+     * {@link MultiOption#unwrapOrElse(Supplier)}, which is lazily evaluated.
      *
-     * @param defaultValue default value that should be returned in the case that {@code Option<T>} is {@code None<T>}
-     *
-     * @return the value if the {@code Option<T>} is {@code Some<T>} and the default value otherwise
+     * @param defaultValue default value that should be returned in the case that {@code Option<T>}
+     *                     is {@code None<T>}
+     * @return the value if the {@code Option<T>} is {@code Some<T>} and the default value
+     *         otherwise
      */
     default Collection<T> unwrapOr(Collection<T> defaultValue) {
         return switch (this) {
@@ -219,11 +236,13 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
     }
 
     /**
-     * Returns the contained {@code One<T>} value or {@code Many<T>} values or computes it with the given {@code Supplier<T>}.
+     * Returns the contained {@code One<T>} value or {@code Many<T>} values or computes it with the
+     * given {@code Supplier<T>}.
      *
-     * @param supplier the supplier that computes the value if {@code MultiOption<T>} is {@code None<T>} or {@code Many<T>}
-     *
-     * @return the value in {@code Some<T>} or {@code Many<T>} or the result of the {@code Supplier<T>}
+     * @param supplier the supplier that computes the value if {@code MultiOption<T>} is
+     *                 {@code None<T>} or {@code Many<T>}
+     * @return the value in {@code Some<T>} or {@code Many<T>} or the result of the
+     *         {@code Supplier<T>}
      */
     default Collection<T> unwrapOrElse(Supplier<Collection<T>> supplier) {
         return switch (this) {
@@ -234,12 +253,12 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
     }
 
     /**
-     * Maps an {@code MultiOption<T>} to {@code MultiOption<R>} by applying a function to a contained value (if {@code One<T>}) or values
-     * ({@code Many<T>} returns None (if {@code None}).
+     * Maps an {@code MultiOption<T>} to {@code MultiOption<R>} by applying a function to a
+     * contained value (if {@code One<T>}) or values ({@code Many<T>} returns None (if
+     * {@code None}).
      *
      * @param f   function that converts {@code T} to {@code R}
      * @param <R> type that the value of a {@code Some<T>} should be converted to
-     *
      * @return a new {@code MultiOption<R>} with the converted value(s)
      */
     default <R> MultiOption<R> map(Function<? super T, ? extends R> f) {
@@ -253,8 +272,9 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
     }
 
     /**
-     * Calls the provided {@code Consumer<T>} with the contained value(s) (if {@code One<T>} or {@code Many<T>}) and returns itself. This
-     * allows for chaining multiple consumers that all need the value(s) e.g.:
+     * Calls the provided {@code Consumer<T>} with the contained value(s) (if {@code One<T>} or
+     * {@code Many<T>}) and returns itself. This allows for chaining multiple consumers that all
+     * need the value(s) e.g.:
      * <pre>
      * {@code MultiOption<String> stringOption = one("möp");}
      * {@code stringOption.inspect(System.out::println)}
@@ -262,7 +282,6 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
      * </pre>
      *
      * @param consumer function that accepts the value(s) (if {@code One<T>} or {@code Many<T>})
-     *
      * @return the {@code MultiOption<T>} it was called on
      */
     default MultiOption<T> inspect(Consumer<? super Collection<? super T>> consumer) {
@@ -277,19 +296,22 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
     }
 
     /**
-     * Returns the provided default result (if {@code None<T>}), or applies a {@code Fuction<T,R>} to the contained value (if {@code One})
-     * or values (if {@code Many<T>}).
+     * Returns the provided default result (if {@code None<T>}), or applies a {@code Fuction<T,R>}
+     * to the contained value (if {@code One}) or values (if {@code Many<T>}).
      * <p>
-     * Arguments passed to {@link MultiOption#mapOr(Collection, Function)} are eagerly evaluated; if you are passing the result of a
-     * function call, it is recommended to use {@link MultiOption#mapOrElse(Supplier, Function)}, which is lazily evaluated.
+     * Arguments passed to {@link MultiOption#mapOr(Collection, Function)} are eagerly evaluated; if
+     * you are passing the result of a function call, it is recommended to use
+     * {@link MultiOption#mapOrElse(Supplier, Function)}, which is lazily evaluated.
      *
      * @param defaultValue default value that is returned if {@code None<T>}
-     * @param f            function that converts the value in case of {@code One<T>} and values in case of {@code Many<T>}
+     * @param f            function that converts the value in case of {@code One<T>} and values in
+     *                     case of {@code Many<T>}
      * @param <R>          the target type that should be mapped to
-     *
      * @return the mapped value or the default value if {@code None<T>}
      */
-    default <R> Collection<R> mapOr(Collection<R> defaultValue, Function<? super T, ? extends R> f) {
+    default <R> Collection<R> mapOr(
+            Collection<R> defaultValue,
+            Function<? super T, ? extends R> f) {
         return switch (this) {
             case None<T> ignored -> defaultValue;
             case One<T> one -> Collections.singletonList(f.apply(one.value));
@@ -300,16 +322,19 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
     }
 
     /**
-     * + Computes a default function result (if {@code None}), or applies a different function to the contained value (if {@code One}) or
-     * values (if {@code Many<T>}).
+     * + Computes a default function result (if {@code None}), or applies a different function to
+     * the contained value (if {@code One}) or values (if {@code Many<T>}).
      *
-     * @param defaultSupplier {@code Supplier<? extends Collection<? extends R>>} that supplies a value(s) if {@code None}
-     * @param f               function that converts the value in case of {@code Some<T>} and values of {@code Many<T>}
+     * @param defaultSupplier {@code Supplier<? extends Collection<? extends R>>} that supplies a
+     *                        value(s) if {@code None}
+     * @param f               function that converts the value in case of {@code Some<T>} and values
+     *                        of {@code Many<T>}
      * @param <R>             the target type that should be mapped to
-     *
      * @return the mapped value or the default value if {@code None}
      */
-    default <R> Collection<R> mapOrElse(Supplier<? extends Collection<R>> defaultSupplier, Function<? super T, ? extends R> f) {
+    default <R> Collection<R> mapOrElse(
+            Supplier<? extends Collection<R>> defaultSupplier,
+            Function<? super T, ? extends R> f) {
         return switch (this) {
             case None<T> ignored -> defaultSupplier.get();
             case One<T> one -> Collections.singletonList(f.apply(one.value));
@@ -336,9 +361,9 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
      *   </tr>
      * </table>
      *
-     * @param unknownAmount an iterator of unknown size that should be turned into a {@link MultiOption}
+     * @param unknownAmount an iterator of unknown size that should be turned into a
+     *                      {@link MultiOption}
      * @param <T>           type of the list elements
-     *
      * @return a {@link MultiOption} according to the above rules
      */
     static <T> MultiOption<T> from(Iterator<T> unknownAmount) {
@@ -396,9 +421,9 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
      *   </tr>
      * </table>
      *
-     * @param unknownAmount a collection of unknown size that should be turned into a {@link MultiOption}
+     * @param unknownAmount a collection of unknown size that should be turned into a
+     *                      {@link MultiOption}
      * @param <T>           type of the list elements
-     *
      * @return a {@link MultiOption} according to the above rules
      */
     static <T> MultiOption<T> from(Collection<T> unknownAmount) {
@@ -421,10 +446,13 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
     static <T> MultiOption<T> fromMultiOptions(Collection<MultiOption<T>> multipleMultiOptions) {
         return MultiOption.from(multipleMultiOptions.stream()
                                                     .flatMap(multiOption -> switch (multiOption) {
-                                                        case MultiOption.None<T> ignored -> Stream.of();
-                                                        case MultiOption.One<T> one -> Stream.of(one.value());
-                                                        case MultiOption.Many<T> many -> many.values()
-                                                                                             .stream();
+                                                        case MultiOption.None<T> ignored ->
+                                                                Stream.of();
+                                                        case MultiOption.One<T> one ->
+                                                                Stream.of(one.value());
+                                                        case MultiOption.Many<T> many ->
+                                                                many.values()
+                                                                    .stream();
                                                     })
                                                     .collect(Collectors.toSet()));
     }
