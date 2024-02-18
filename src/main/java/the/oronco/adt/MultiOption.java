@@ -257,7 +257,7 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
     }
 
     /**
-     * Returns the contained {@code One<T>} value or {@Many} values and a default value
+     * Returns the contained {@code One<T>} value or {@code Many<T>} values and a default value
      * otherwise.<p> Arguments passed to {@link MultiOption#unwrapOr(Collection)} are eagerly
      * evaluated; if you are passing the result of a function call, it is recommended to use
      * {@link MultiOption#unwrapOrElse(Supplier)}, which is lazily evaluated.
