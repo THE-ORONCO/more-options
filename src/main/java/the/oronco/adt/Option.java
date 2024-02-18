@@ -6,7 +6,10 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
@@ -16,10 +19,6 @@ import lombok.ToString;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.data.util.Streamable;
 import the.oronco.Rusty;
-import the.oronco.adt.nonnulllambdas.NotNullConsumer;
-import the.oronco.adt.nonnulllambdas.NotNullMapper;
-import the.oronco.adt.nonnulllambdas.NotNullPredicate;
-import the.oronco.adt.nonnulllambdas.NotNullSupplier;
 
 // TODO examples like in the rust documentation
 // TODO replace exceptions with better exceptions
@@ -41,11 +40,11 @@ public sealed interface Option<T>
     @ToString
     @EqualsAndHashCode
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
-    final class None<T> implements Option<T> {}
+    final class None<T> implements Option<@NotNull T> {}
 
     @ToString
     @EqualsAndHashCode
-    final class Some<T> implements Option<T> {
+    final class Some<T> implements Option<@NotNull T> {
         private final @NotNull T value;
 
         private Some(@NotNull @NonNull T value) {
@@ -79,7 +78,7 @@ public sealed interface Option<T>
      *
      * @return if the value exists && the predicate matches
      */
-    default boolean isSomeAnd(@NotNull @NonNull NotNullPredicate<? super T> predicate) {
+    default boolean isSomeAnd(@NotNull @NonNull Predicate<? super @NotNull T> predicate) {
         return switch (this) {
             case Some<T> some -> predicate.test(some.value);
             case None<T> ignored -> false;
@@ -108,7 +107,7 @@ public sealed interface Option<T>
      * @throws NoSuchElementException with the given Error message when the {@code Option<T>} is
      *                                {@code None<T>}
      */
-    default @NotNull T expect(String errorMessage) throws NoSuchElementException {
+    default @NotNull T expect(String errorMessage) throws @NotNull NoSuchElementException {
         return switch (this) {
             case Some<T> some -> some.value;
             case None<T> ignored -> throw new NoSuchElementException(errorMessage);
@@ -123,7 +122,7 @@ public sealed interface Option<T>
      *
      * @throws E with the given Exception when the {@code Option<T>} is {@code None<T>}
      */
-    default @NotNull <E extends Exception> T expect(@NonNull E errorMessage) throws E {
+    default @NotNull <E extends Exception> T expect(@NonNull E errorMessage) throws @NotNull E {
         return switch (this) {
             case Some<T> some -> some.value;
             case None<T> ignored -> throw errorMessage;
@@ -138,8 +137,8 @@ public sealed interface Option<T>
      *
      * @throws E with the given Exception when the {@code Option<T>} is {@code None<T>}
      */
-    default @NotNull <E extends Exception> T expect(@NotNull @NonNull NotNullSupplier<E> exceptionSupplier) throws
-                                                                                                            E {
+    default @NotNull <E extends Exception> T expectElse(@NotNull @NonNull Supplier<@NotNull E> exceptionSupplier) throws
+                                                                                                                  @NotNull E {
         return switch (this) {
             case Some<T> some -> some.value;
             case None<T> ignored -> throw exceptionSupplier.get();
@@ -152,13 +151,13 @@ public sealed interface Option<T>
      * <p>
      * The usage of this method is discouraged as control flow through exceptions can be hard to
      * understand and organize. Use {@link Option#unwrapOr(Object)} or
-     * {@link Option#unwrapOrElse(NotNullSupplier)} instead.
+     * {@link Option#unwrapOrElse(Supplier)} instead.
      *
      * @return the value if the {@code Option<T>} is {@code Some<T>}
      *
      * @throws NoSuchElementException when the {@code Option<T>} is {@code None<T>}
      */
-    default @NotNull T unwrap() throws NoSuchElementException {
+    default @NotNull T unwrap() throws @NotNull NoSuchElementException {
         return switch (this) {
             case Some<T> some -> some.value;
             case None<T> ignored ->
@@ -169,8 +168,8 @@ public sealed interface Option<T>
     /**
      * Returns the contained {@code Some<T>} value and a default value otherwise.<p> Arguments
      * passed to {@link Option#unwrapOr(T)} are eagerly evaluated; if you are passing the result of
-     * a function call, it is recommended to use {@link Option#unwrapOrElse(NotNullSupplier)}, which
-     * is lazily evaluated.
+     * a function call, it is recommended to use {@link Option#unwrapOrElse(Supplier)}, which is
+     * lazily evaluated.
      *
      * @param defaultValue default value that should be returned in the case that {@code Option<T>}
      *                     is {@code None<T>}
@@ -192,7 +191,7 @@ public sealed interface Option<T>
      *
      * @return the value in {@code Some<T>} or the result of the {@code Supplier<T>}
      */
-    default T unwrapOrElse(@NotNull @NonNull NotNullSupplier<? extends T> supplier) {
+    default T unwrapOrElse(@NotNull @NonNull Supplier<? extends @NotNull T> supplier) {
         return switch (this) {
             case Some<T> some -> some.value;
             case None<T> ignored -> supplier.get();
@@ -208,9 +207,10 @@ public sealed interface Option<T>
      *
      * @return a new {@code Option<R>} with the converted value
      */
-    default <R> @NotNull Option<R> map(@NotNull @NonNull NotNullMapper<? super T, ? extends R> f) {
+    @Override
+    default <R> @NotNull Option<R> map(@NotNull @NonNull Function<? super @NotNull T, ? extends @NotNull R> f) {
         return switch (this) {
-            case Some<T> some -> some(f.map(some.value));
+            case Some<T> some -> some(f.apply(some.value));
             case None<T> ignored -> none();
         };
     }
@@ -228,9 +228,9 @@ public sealed interface Option<T>
      *
      * @return the {@code Option<T>} it was called on
      */
-    default @NotNull Option<T> inspect(@NotNull @NonNull NotNullConsumer<? super T> consumer) {
+    default @NotNull Option<T> inspect(@NotNull @NonNull Consumer<? super @NotNull T> consumer) {
         if (this instanceof Some<T> some) {
-            consumer.consume(some.value);
+            consumer.accept(some.value);
         }
         return this;
     }
@@ -239,9 +239,9 @@ public sealed interface Option<T>
      * Returns the provided default result (if {@code None<T>}), or applies a {@code Fuction<T,R>}
      * to the contained value (if {@code Some}).
      * <p>
-     * Arguments passed to {@link Option#mapOr(Object, NotNullMapper)} are eagerly evaluated; if you
-     * are passing the result of a function call, it is recommended to use
-     * {@link Option#mapOrElse(NotNullSupplier, NotNullMapper)}, which is lazily evaluated.
+     * Arguments passed to {@link Option#mapOr(Object, Function)} are eagerly evaluated; if you are
+     * passing the result of a function call, it is recommended to use
+     * {@link Option#mapOrElse(Supplier, Function)}, which is lazily evaluated.
      *
      * @param defaultValue default value that is returned if {@code None<T>}
      * @param f            function that converts the value in case of {@code Some<T>}
@@ -249,9 +249,10 @@ public sealed interface Option<T>
      *
      * @return the mapped value or the default value if {@code None<T>}
      */
-    default <R> R mapOr(R defaultValue, @NotNull @NonNull NotNullMapper<? super T, ? extends R> f) {
+    default <R> R mapOr(R defaultValue,
+                        @NotNull @NonNull Function<? super @NotNull T, ? extends @NotNull R> f) {
         return switch (this) {
-            case Some<T> some -> f.map(some.value);
+            case Some<T> some -> f.apply(some.value);
             case None<T> ignored -> defaultValue;
         };
     }
@@ -266,22 +267,21 @@ public sealed interface Option<T>
      *
      * @return the mapped value or the default value if {@code None}
      */
-    default <R> R mapOrElse(@NotNull @NonNull NotNullSupplier<? extends R> defaultSupplier,
-                            @NotNull @NonNull NotNullMapper<? super T, ? extends R> f) {
+    default <R> R mapOrElse(@NotNull @NonNull Supplier<? extends @NotNull R> defaultSupplier,
+                            @NotNull @NonNull Function<? super @NotNull T, ? extends @NotNull R> f) {
         return switch (this) {
-            case Some<T> some -> f.map(some.value);
+            case Some<T> some -> f.apply(some.value);
             case None<T> ignored -> defaultSupplier.get();
         };
     }
-
 
     /**
      * Transforms the {@code Option<T>} into a {@code Result<T, E>}, mapping {@code Some(v)} to
      * {@code Ok(v)} and {@code None} to {@code Err(err)}.
      * <p>
      * Arguments passed to {@link Option#okOr(Object)} are eagerly evaluated; if you are passing the
-     * result of a function call, it is recommended to use {@link Option#okOrElse(NotNullSupplier)},
-     * which is lazily evaluated.
+     * result of a function call, it is recommended to use {@link Option#okOrElse(Supplier)}, which
+     * is lazily evaluated.
      *
      * @param err error value that should be returned.
      * @param <E> type of the error that should be returned
@@ -304,7 +304,7 @@ public sealed interface Option<T>
      *
      * @return a result representing the {@code Option<T>} in form of a {@code Result<T, E>}
      */
-    default <E> @NotNull Result<T, E> okOrElse(@NotNull @NonNull NotNullSupplier<? extends E> err) {
+    default <E> @NotNull Result<T, E> okOrElse(@NotNull @NonNull Supplier<? extends @NotNull E> err) {
         return switch (this) {
             case Some<T> some -> Result.ok(some.value);
             case None<T> ignored -> Result.err(err.get());
@@ -340,8 +340,7 @@ public sealed interface Option<T>
      * {@code other}.
      * <p>
      * Arguments passed to and are eagerly evaluated; if you are passing the result of a function
-     * call, it is recommended to use {@link Option#andThen(NotNullMapper)}, which is lazily
-     * evaluated.
+     * call, it is recommended to use {@link Option#andThen(Function)}, which is lazily evaluated.
      *
      * @param other other {@code Option<U>} that should be returned when this is {@code Some<T>}
      * @param <U>   type of the other optional
@@ -367,9 +366,9 @@ public sealed interface Option<T>
      * @return either the result of {@code other(some.value)} or {@code None} when this is
      * {@code None}
      */
-    default <U> @NotNull Option<? extends U> andThen(@NotNull @NonNull NotNullMapper<? super T, Option<? extends U>> other) {
+    default <U> @NotNull Option<? extends U> andThen(@NotNull @NonNull Function<? super @NotNull T, Option<? extends @NotNull U>> other) {
         return switch (this) {
-            case Some<T> some -> other.map(some.value);
+            case Some<T> some -> other.apply(some.value);
             case None<T> ignored -> none();
         };
     }
@@ -407,8 +406,7 @@ public sealed interface Option<T>
      * Returns the {@code Option<T>} if it contains a value, otherwise returns {@code other}.
      * <p>
      * Arguments passed to or are eagerly evaluated; if you are passing the result of a function
-     * call, it is recommended to use {@link Option#orElse(NotNullSupplier)}, which is lazily
-     * evaluated.
+     * call, it is recommended to use {@link Option#orElse(Supplier)}, which is lazily evaluated.
      *
      * @param other the other {@code Option<T>} that should be returned instead if {@code this} is
      *              {@code None<T>}
@@ -429,8 +427,8 @@ public sealed interface Option<T>
      * {@code None<T>}.
      * <p>
      * Arguments passed to or are eagerly evaluated; if you are passing the result of a function
-     * call, it is recommended to use {@link Option#orNullableElse(NotNullSupplier)}, which is
-     * lazily evaluated.
+     * call, it is recommended to use {@link Option#orNullableElse(Supplier)}, which is lazily
+     * evaluated.
      *
      * @param other the other {@code Option<T>} that should be returned instead if {@code this} is
      *              {@code None<T>}
@@ -455,7 +453,7 @@ public sealed interface Option<T>
      * @return the {@code Option<T>} if it contains a value, otherwise calls the {@code Supplier}
      * and returns the result
      */
-    default <S extends T> @NotNull Option<? extends T> orElse(@NotNull @NonNull NotNullSupplier<Option<S>> other) {
+    default <S extends T> @NotNull Option<? extends T> orElse(@NotNull @NonNull Supplier<@NotNull Option<S>> other) {
         return switch (this) {
             case Some<T> some -> some(some.value);
             case None<T> ignored -> other.get();
@@ -472,7 +470,7 @@ public sealed interface Option<T>
      * @return the {@code Option<T>} if it contains a value, otherwise calls the {@code Supplier}
      * and returns the result in an {@code Option<T>}
      */
-    default <S extends T> @NotNull Option<T> orNullableElse(@NotNull @NonNull NotNullSupplier<S> other) {
+    default <S extends T> @NotNull Option<T> orNullableElse(@NotNull @NonNull Supplier<@NotNull S> other) {
         return switch (this) {
             case Some<T> some -> some(some.value);
             case None<T> ignored -> Option.from(other.get());
