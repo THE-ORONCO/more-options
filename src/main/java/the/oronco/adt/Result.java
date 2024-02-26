@@ -10,7 +10,10 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
+
+import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.ToString;
 import org.jetbrains.annotations.NotNull;
@@ -25,6 +28,15 @@ import the.oronco.adt.ControlFlow.Continue;
 // TODO tests
 public sealed interface Result<T, E>
         extends Rusty<Optional<T>>, Try<T, Result<Infallible, E>>, Streamable<T>, Serializable {
+    /**
+     * When the Result should be an OK but the actual value does not matter.
+     */
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    class GOOD {
+    }
+
+    Result.GOOD GOOD = new GOOD();
+
     @ToString
     @EqualsAndHashCode
     final class Ok<T, E> implements Result<@NotNull T, @NotNull E> {
@@ -550,6 +562,9 @@ public sealed interface Result<T, E>
 
     static <T, E> @NotNull Ok<T, E> ok(@NotNull @NonNull T result) {
         return new Ok<>(result);
+    }
+    static <E> @NotNull Ok<GOOD, E> good() {
+        return new Ok<>(Result.GOOD);
     }
 
     static <T, E> @NotNull Result<T, E> from(T value, @NotNull @NonNull E error) {
