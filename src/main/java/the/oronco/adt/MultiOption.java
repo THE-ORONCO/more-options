@@ -175,7 +175,8 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
 
     default <C> @NotNull C wrap(@NotNull @NonNull Function<? super @NotNull Collection<? extends T>, ? extends @NotNull C> wrap) {
         return switch (this) {
-            case None<T> ignored -> wrap.apply(Collections.EMPTY_LIST);
+            case None<T> ignored -> //noinspection unchecked
+                    wrap.apply((Collection<? extends T>) Collections.EMPTY_LIST);
             case One<T> one -> wrap.apply(Collections.singleton(one.value));
             case Many<T> many -> wrap.apply(many.values);
         };

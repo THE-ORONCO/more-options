@@ -6,10 +6,6 @@ import lombok.AllArgsConstructor;
 
 import java.util.function.Function;
 
-/**
- * @author Théo Roncoletta
- * @since 09.02.24
- **/
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public final class Safe<T> implements AutoCloseable {
     private Result<T, Exception> currentResult;

@@ -19,6 +19,7 @@ import lombok.ToString;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.data.util.Streamable;
 import the.oronco.Rusty;
+import the.oronco.adt.exceptions.GivenValueWasNullError;
 
 // TODO examples like in the rust documentation
 // TODO replace exceptions with better exceptions
@@ -27,7 +28,7 @@ import the.oronco.Rusty;
 // TODO tests
 
 /**
- * Similar to {@link Optional} in that it describes a value that can either be there or not. But
+ * Similar to {@link java.util.Optional} in that it describes a value that can either be there or not. But
  * better as it can be used in the new switch pattern matching. It is inspired by the rust algebraic
  * type of <a href="https://doc.rust-lang.org/std/option/enum.Option.html">std::option::Option</a>.
  *
@@ -86,7 +87,7 @@ public sealed interface Option<T>
     }
 
     /**
-     * Creates a {@link Stream} from the {@code Option<T>} that contains the value of
+     * Creates a {@link java.util.stream.Stream} from the {@code Option<T>} that contains the value of
      * {@code Some<T>} and is empty otherwise.
      *
      * @return the stream that contains the value of {@code Some<T>} and is empty otherwise
@@ -104,7 +105,7 @@ public sealed interface Option<T>
      *
      * @return the value if the {@code Option<T>} is {@code Some<T>}
      *
-     * @throws NoSuchElementException with the given Error message when the {@code Option<T>} is
+     * @throws java.util.NoSuchElementException with the given Error message when the {@code Option<T>} is
      *                                {@code None<T>}
      */
     default @NotNull T expect(String errorMessage) throws @NotNull NoSuchElementException {
@@ -147,15 +148,15 @@ public sealed interface Option<T>
 
     /**
      * Returns the contained {@code Some<T>} value and throws otherwise. (Similar to
-     * {@link Option#expect(String)} but without a custom error message)
+     * {@link the.oronco.adt.Option#expect(String)} but without a custom error message)
      * <p>
      * The usage of this method is discouraged as control flow through exceptions can be hard to
-     * understand and organize. Use {@link Option#unwrapOr(Object)} or
-     * {@link Option#unwrapOrElse(Supplier)} instead.
+     * understand and organize. Use {@link the.oronco.adt.Option#unwrapOr(Object)} or
+     * {@link the.oronco.adt.Option#unwrapOrElse(java.util.function.Supplier)} instead.
      *
      * @return the value if the {@code Option<T>} is {@code Some<T>}
      *
-     * @throws NoSuchElementException when the {@code Option<T>} is {@code None<T>}
+     * @throws java.util.NoSuchElementException when the {@code Option<T>} is {@code None<T>}
      */
     default @NotNull T unwrap() throws @NotNull NoSuchElementException {
         return switch (this) {
@@ -167,8 +168,8 @@ public sealed interface Option<T>
 
     /**
      * Returns the contained {@code Some<T>} value and a default value otherwise.<p> Arguments
-     * passed to {@link Option#unwrapOr(T)} are eagerly evaluated; if you are passing the result of
-     * a function call, it is recommended to use {@link Option#unwrapOrElse(Supplier)}, which is
+     * passed to {@link the.oronco.adt.Option#unwrapOr(T)} are eagerly evaluated; if you are passing the result of
+     * a function call, it is recommended to use {@link the.oronco.adt.Option#unwrapOrElse(java.util.function.Supplier)}, which is
      * lazily evaluated.
      *
      * @param defaultValue default value that should be returned in the case that {@code Option<T>}
@@ -239,9 +240,9 @@ public sealed interface Option<T>
      * Returns the provided default result (if {@code None<T>}), or applies a {@code Fuction<T,R>}
      * to the contained value (if {@code Some}).
      * <p>
-     * Arguments passed to {@link Option#mapOr(Object, Function)} are eagerly evaluated; if you are
+     * Arguments passed to {@link the.oronco.adt.Option#mapOr(Object, java.util.function.Function)} are eagerly evaluated; if you are
      * passing the result of a function call, it is recommended to use
-     * {@link Option#mapOrElse(Supplier, Function)}, which is lazily evaluated.
+     * {@link the.oronco.adt.Option#mapOrElse(java.util.function.Supplier, java.util.function.Function)}, which is lazily evaluated.
      *
      * @param defaultValue default value that is returned if {@code None<T>}
      * @param f            function that converts the value in case of {@code Some<T>}
@@ -279,8 +280,8 @@ public sealed interface Option<T>
      * Transforms the {@code Option<T>} into a {@code Result<T, E>}, mapping {@code Some(v)} to
      * {@code Ok(v)} and {@code None} to {@code Err(err)}.
      * <p>
-     * Arguments passed to {@link Option#okOr(Object)} are eagerly evaluated; if you are passing the
-     * result of a function call, it is recommended to use {@link Option#okOrElse(Supplier)}, which
+     * Arguments passed to {@link the.oronco.adt.Option#okOr(Object)} are eagerly evaluated; if you are passing the
+     * result of a function call, it is recommended to use {@link the.oronco.adt.Option#okOrElse(java.util.function.Supplier)}, which
      * is lazily evaluated.
      *
      * @param err error value that should be returned.
@@ -308,6 +309,21 @@ public sealed interface Option<T>
         return switch (this) {
             case Some<T> some -> Result.ok(some.value);
             case None<T> ignored -> Result.err(err.get());
+        };
+    }
+
+
+    /**
+     * Transforms the {@code Option<T>} into a {@code Condition<T>}, mapping {@code Some(v)} to {@code Holds(v, p)} and {@code None} to
+     * {@code HoldsNot}.
+     *
+     * @param condition condition that should hold on the contained value
+     * @return a {@code Condition<T>} representing the {@code Option<T>} in form of a {@code Condition<T>}
+     */
+    default @NotNull Condition<T> alwaysMaintain(@NotNull @NonNull Predicate<? super @NotNull T> condition){
+        return switch (this){
+            case Option.Some<T> some -> Condition.from(some.value, condition);
+            case Option.None<T> ignored -> Condition.holdsNot();
         };
     }
 
@@ -340,7 +356,7 @@ public sealed interface Option<T>
      * {@code other}.
      * <p>
      * Arguments passed to and are eagerly evaluated; if you are passing the result of a function
-     * call, it is recommended to use {@link Option#andThen(Function)}, which is lazily evaluated.
+     * call, it is recommended to use {@link the.oronco.adt.Option#andThen(java.util.function.Function)}, which is lazily evaluated.
      *
      * @param other other {@code Option<U>} that should be returned when this is {@code Some<T>}
      * @param <U>   type of the other optional
@@ -406,7 +422,7 @@ public sealed interface Option<T>
      * Returns the {@code Option<T>} if it contains a value, otherwise returns {@code other}.
      * <p>
      * Arguments passed to or are eagerly evaluated; if you are passing the result of a function
-     * call, it is recommended to use {@link Option#orElse(Supplier)}, which is lazily evaluated.
+     * call, it is recommended to use {@link the.oronco.adt.Option#orElse(java.util.function.Supplier)}, which is lazily evaluated.
      *
      * @param other the other {@code Option<T>} that should be returned instead if {@code this} is
      *              {@code None<T>}
@@ -427,7 +443,7 @@ public sealed interface Option<T>
      * {@code None<T>}.
      * <p>
      * Arguments passed to or are eagerly evaluated; if you are passing the result of a function
-     * call, it is recommended to use {@link Option#orNullableElse(Supplier)}, which is lazily
+     * call, it is recommended to use {@link the.oronco.adt.Option#orNullableElse(java.util.function.Supplier)}, which is lazily
      * evaluated.
      *
      * @param other the other {@code Option<T>} that should be returned instead if {@code this} is
@@ -496,7 +512,7 @@ public sealed interface Option<T>
     }
 
     /**
-     * Creates a Java {@link Optional} out of the option.
+     * Creates a Java {@link java.util.Optional} out of the option.
      *
      * @return an optional containing the value of the option
      */
@@ -506,7 +522,7 @@ public sealed interface Option<T>
     }
 
     /**
-     * Creates a Java {@link Optional} out of the option.
+     * Creates a Java {@link java.util.Optional} out of the option.
      *
      * @return an optional containing the value of the option
      */
@@ -536,8 +552,8 @@ public sealed interface Option<T>
     static <T> @NotNull Option<T> of(@NotNull @NonNull Streamable<T> streamable) {
         return switch (MultiOption.of(streamable)) {
             case MultiOption.Many<T> ignored -> none();
-            case MultiOption.None<T> ignored -> none();
             case MultiOption.One<T> one -> some(one.value());
+            case MultiOption.None<T> ignored -> none();
         };
     }
 
@@ -546,7 +562,15 @@ public sealed interface Option<T>
         return new Some<>(value);
     }
 
-    // TODO think of the potential memory problems that multiple NONE-Objects may cause
+    static <T> @NotNull Result<Option<T>, GivenValueWasNullError> someSafe(@NotNull T value){
+        //noinspection ConstantValue
+        if (value != null) {
+            return Result.ok(some(value));
+        } else {
+            return Result.err(new GivenValueWasNullError("The value given was null despite the contract forbidding that!"));
+        }
+    }
+
     @SuppressWarnings("unchecked")
     static <T> @NotNull Option<T> none() {
         return (Option<T>) NONE;
