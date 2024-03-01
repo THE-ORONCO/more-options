@@ -540,11 +540,11 @@ public sealed interface Result<T, E>
         };
     }
 
-    static <T, E> @NotNull Err<T, E> err(@NotNull @NonNull E error) {
+    static <T, E> @NotNull Result<T, E> err(@NotNull @NonNull E error) {
         return new Err<>(error);
     }
 
-    static <T, E> @NotNull Ok<T, E> ok(@NotNull @NonNull T result) {
+    static <T, E> @NotNull Result<T, E> ok(@NotNull @NonNull T result) {
         return new Ok<>(result);
     }
     static <E> @NotNull Ok<GOOD, E> good() {
