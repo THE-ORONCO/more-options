@@ -20,7 +20,9 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.ToString;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Unmodifiable;
 import org.springframework.data.util.Streamable;
 import the.oronco.Rusty;
 
@@ -35,42 +37,24 @@ import the.oronco.Rusty;
  *
  * @param <T> Type of the value (needed for type save code)
  */
+@Unmodifiable
 public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<T>, Serializable {
     None<?> NONE = new None<>();
 
     @ToString
     @EqualsAndHashCode
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    @Unmodifiable
     final class None<T> implements MultiOption<@NotNull T> {}
-
-    @ToString
-    @EqualsAndHashCode
-    final class One<T> implements MultiOption<@NotNull T> {
-        private final @NotNull T value;
-
-        private One(@NotNull @NonNull T value) {
-            this.value = value;
-        }
-
-        public @NotNull T value() {
-            return value;
-        }
+    @Unmodifiable
+    record One<T>(@NotNull @NonNull T value) implements MultiOption<@NotNull T> {
+    }
+    @Unmodifiable
+    record Many<T>(@NotNull @NonNull Collection<T> values) implements MultiOption<@NotNull T> {
     }
 
-    @ToString
-    @EqualsAndHashCode
-    final class Many<T> implements MultiOption<@NotNull T> {
-        private final @NotNull Collection<T> values;
 
-        private Many(@NotNull @NonNull Collection<T> values) {
-            this.values = values;
-        }
-
-        public @NotNull Collection<T> values() {
-            return values;
-        }
-    }
-
+    @Contract(pure = true)
     default boolean isNone() {
         return switch (this) {
             case None<T> ignored -> true;
@@ -79,6 +63,7 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
         };
     }
 
+    @Contract(pure = true)
     default boolean isOne() {
         return switch (this) {
             case None<T> ignored -> false;
@@ -99,11 +84,12 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
     default boolean isOneAnd(@NotNull @NonNull Predicate<? super @NotNull T> predicate) {
         return switch (this) {
             case None<T> ignored -> false;
-            case One<T> one -> predicate.test(one.value);
+            case One<T>(T value) -> predicate.test(value);
             case Many<T> ignored -> false;
         };
     }
 
+    @Contract(pure = true)
     default boolean isMany() {
         return switch (this) {
             case None<T> ignored -> false;
@@ -125,7 +111,7 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
         return switch (this) {
             case None<T> ignored -> false;
             case One<T> ignored -> false;
-            case Many<T> many -> predicate.test(many.values);
+            case Many<T>(var values) -> predicate.test(values);
         };
     }
 
@@ -137,39 +123,43 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
      * empty otherwise
      */
     @Override
+    @Contract(value = "-> new", pure = true)
     default @NotNull Stream<T> stream() {
         return switch (this) {
             case None<T> ignored -> Stream.of();
-            case One<T> one -> Stream.of(one.value);
-            case Many<T> many -> many.values.stream();
+            case One<T>(T value) -> Stream.of(value);
+            case Many<T>(var values) -> values.stream();
         };
     }
 
     @Override
+    @Contract(value = "-> new", pure = true)
     default @NotNull Set<T> toSet() {
         return switch (this) {
             case None<T> ignored -> Set.of();
-            case One<T> one -> Set.of(one.value);
-            case Many<T> many -> Set.copyOf(many.values);
+            case One<T>(T value) -> Set.of(value);
+            case Many<T>(var values) -> Set.copyOf(values);
         };
     }
 
     @Override
+    @Contract(value = "-> new", pure = true)
     default @NotNull List<T> toList() {
         return switch (this) {
             case None<T> ignored -> List.of();
-            case One<T> one -> List.of(one.value);
-            case Many<T> many -> List.copyOf(many.values);
+            case One<T>(T value) -> List.of(value);
+            case Many<T>(var values) -> List.copyOf(values);
         };
     }
 
     @Override
+    @Contract(value = "-> new", pure = true)
     default @NotNull Iterator<T> iterator() {
         return switch (this) {
             case None<T> ignored -> Collections.emptyIterator();
-            case One<T> one -> Stream.of(one.value)
+            case One<T>(T value) -> Stream.of(value)
                                      .iterator();
-            case Many<T> many -> many.values.iterator();
+            case Many<T>(var values) -> values.iterator();
         };
     }
 
@@ -177,8 +167,8 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
         return switch (this) {
             case None<T> ignored -> //noinspection unchecked
                     wrap.apply((Collection<? extends T>) Collections.EMPTY_LIST);
-            case One<T> one -> wrap.apply(Collections.singleton(one.value));
-            case Many<T> many -> wrap.apply(many.values);
+            case One<T>(T value) -> wrap.apply(Collections.singleton(value));
+            case Many<T>(var values) -> wrap.apply(values);
         };
     }
 
@@ -195,8 +185,8 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
                                                                                  @NotNull NoSuchElementException {
         return switch (this) {
             case None<T> ignored -> throw new NoSuchElementException(errorMessage);
-            case One<T> one -> new ArrayList<>(Collections.singletonList(one.value));
-            case Many<T> many -> new ArrayList<>(many.values);
+            case One<T>(T value) -> new ArrayList<>(Collections.singletonList(value));
+            case Many<T>(var values) -> new ArrayList<>(values);
         };
     }
 
@@ -212,8 +202,8 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
                                                                                                @NotNull X {
         return switch (this) {
             case None<T> ignored -> throw exception;
-            case One<T> one -> new ArrayList<>(Collections.singletonList(one.value));
-            case Many<T> many -> new ArrayList<>(many.values);
+            case One<T>(T value) -> new ArrayList<>(Collections.singletonList(value));
+            case Many<T>(var values) -> new ArrayList<>(values);
         };
     }
 
@@ -231,8 +221,8 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
 
         return switch (this) {
             case None<T> ignored -> throw exceptionSupplier.get();
-            case One<T> one -> new ArrayList<>(Collections.singletonList(one.value));
-            case Many<T> many -> new ArrayList<>(many.values);
+            case One<T>(T value) -> new ArrayList<>(Collections.singletonList(value));
+            case Many<T>(var values) -> new ArrayList<>(values);
         };
     }
 
@@ -252,8 +242,8 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
         return switch (this) {
             case None<T> ignored ->
                     throw new NoSuchElementException("Option was unwrapped but it had no value!");
-            case One<T> one -> new ArrayList<>(Collections.singleton(one.value));
-            case Many<T> many -> new ArrayList<>(many.values);
+            case One<T>(T value) -> new ArrayList<>(Collections.singleton(value));
+            case Many<T>(var values) -> new ArrayList<>(values);
         };
     }
 
@@ -271,8 +261,8 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
     default @NotNull Collection<T> unwrapOr(@NotNull @NonNull Collection<T> defaultValue) {
         return switch (this) {
             case None<T> ignored -> defaultValue;
-            case One<T> one -> new ArrayList<>(Collections.singleton(one.value));
-            case Many<T> many -> new ArrayList<>(many.values);
+            case One<T>(T value) -> new ArrayList<>(Collections.singleton(value));
+            case Many<T>(var values) -> new ArrayList<>(values);
         };
     }
 
@@ -289,8 +279,8 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
     default @NotNull Collection<T> unwrapOrElse(@NotNull @NonNull Supplier<? extends @NotNull Collection<@NotNull T>> supplier) {
         return switch (this) {
             case None<T> ignored -> supplier.get();
-            case One<T> one -> new ArrayList<>(Collections.singleton(one.value));
-            case Many<T> many -> new ArrayList<>(many.values);
+            case One<T>(T value) -> new ArrayList<>(Collections.singleton(value));
+            case Many<T>(var values) -> new ArrayList<>(values);
         };
     }
 
@@ -308,8 +298,8 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
     default <R> @NotNull MultiOption<R> map(@NotNull @NonNull Function<? super @NotNull T, ? extends @NotNull R> f) {
         return switch (this) {
             case None<T> ignored -> none();
-            case One<T> one -> one(f.apply(one.value));
-            case Many<T> many -> many(many.values.stream()
+            case One<T>(T value) -> one(f.apply(value));
+            case Many<T>(var values) -> many(values.stream()
                                                  .map(f)
                                                  .collect(Collectors.toList()));
         };
@@ -333,8 +323,8 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
         switch (this) {
             case None<T> ignored -> {
             }
-            case One<T> one -> consumer.accept(Collections.singletonList(one.value));
-            case Many<T> many -> consumer.accept(many.values);
+            case One<T>(T value) -> consumer.accept(Collections.singletonList(value));
+            case Many<T>(var values) -> consumer.accept(values);
         }
 
         return this;
@@ -359,8 +349,8 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
                                              @NotNull @NonNull Function<? super @NotNull T, ? extends @NotNull R> f) {
         return switch (this) {
             case None<T> ignored -> defaultValue;
-            case One<T> one -> Collections.singletonList(f.apply(one.value));
-            case Many<T> many -> many.values.stream()
+            case One<T>(T value) -> Collections.singletonList(f.apply(value));
+            case Many<T>(var values) -> values.stream()
                                             .map(f)
                                             .collect(Collectors.toList());
         };
@@ -382,8 +372,8 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
                                                  @NotNull @NonNull Function<? super @NotNull T, ? extends @NotNull R> f) {
         return switch (this) {
             case None<T> ignored -> defaultSupplier.get();
-            case One<T> one -> Collections.singletonList(f.apply(one.value));
-            case Many<T> many -> many.values.stream()
+            case One<T>(T value) -> Collections.singletonList(f.apply(value));
+            case Many<T>(var values) -> values.stream()
                                             .map(f)
                                             .collect(Collectors.toList());
         };
@@ -495,13 +485,9 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
     static <T> @NotNull MultiOption<T> fromMultiOptions(@NotNull @NonNull Collection<@NotNull MultiOption<@NotNull T>> multipleMultiOptions) {
         return MultiOption.from(multipleMultiOptions.stream()
                                                     .flatMap(multiOption -> switch (multiOption) {
-                                                        case MultiOption.None<T> ignored ->
-                                                                Stream.of();
-                                                        case MultiOption.One<T> one ->
-                                                                Stream.of(one.value());
-                                                        case MultiOption.Many<T> many ->
-                                                                many.values()
-                                                                    .stream();
+                                                        case MultiOption.None<T> ignored -> Stream.of();
+                                                        case MultiOption.One<T>(T value) -> Stream.of(value);
+                                                        case MultiOption.Many<T>(var values) -> values.stream();
                                                     })
                                                     .collect(Collectors.toSet()));
     }
@@ -517,7 +503,7 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
         return switch (this) {
             case None<T> ignored -> 0;
             case One<T> ignored -> 1;
-            case Many<T> many -> many.values.size();
+            case Many<T>(var values) -> values.size();
         };
     }
 
@@ -525,8 +511,8 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
     default @NotNull Collection<T> j() {
         return switch (this) {
             case None<T> ignored -> Collections.emptyList();
-            case One<T> one -> Collections.singleton(one.value);
-            case Many<T> many -> many.values;
+            case One<T>(T value) -> Collections.singleton(value);
+            case Many<T>(var values) -> values;
         };
     }
 

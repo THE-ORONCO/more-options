@@ -16,7 +16,12 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.ToString;
+import org.intellij.lang.annotations.Flow;
+import org.intellij.lang.annotations.MagicConstant;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 import org.springframework.data.util.Streamable;
 import the.oronco.Rusty;
 import the.oronco.adt.exceptions.GivenValueWasNullError;
@@ -34,29 +39,28 @@ import the.oronco.adt.exceptions.GivenValueWasNullError;
  *
  * @param <T>
  */
+@Unmodifiable
 public sealed interface Option<T>
         extends Rusty<Optional<T>>, Try<T, Option<Infallible>>, Streamable<T>, Serializable {
+    @MagicConstant
     None<?> NONE = new None<>();
 
     @ToString
     @EqualsAndHashCode
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
-    final class None<T> implements Option<@NotNull T> {}
-
-    @ToString
-    @EqualsAndHashCode
-    final class Some<T> implements Option<@NotNull T> {
-        private final @NotNull T value;
-
-        private Some(@NotNull @NonNull T value) {
-            this.value = value;
-        }
-
-        public @NotNull T value() {
-            return value;
+    @Unmodifiable
+    final class None<T> implements Option<@NotNull T> {
+        @Contract(pure = true)
+        @SuppressWarnings("unchecked")
+        public <U> @NotNull Option<U> as() {
+            return (Option<U>) NONE;
         }
     }
 
+    @Unmodifiable
+    record Some<T>(@NotNull @NonNull T value) implements Option<@NotNull T> {}
+
+    @Contract(pure = true)
     default boolean isSome() {
         return switch (this) {
             case Some<T> ignored -> true;
@@ -64,6 +68,7 @@ public sealed interface Option<T>
         };
     }
 
+    @Contract(pure = true)
     default boolean isNone() {
         return switch (this) {
             case Some<T> ignored -> false;
@@ -79,9 +84,9 @@ public sealed interface Option<T>
      *
      * @return if the value exists && the predicate matches
      */
-    default boolean isSomeAnd(@NotNull @NonNull Predicate<? super @NotNull T> predicate) {
+    default boolean isSomeAnd(@NotNull @NonNull Predicate<? super  @NotNull T> predicate) {
         return switch (this) {
-            case Some<T> some -> predicate.test(some.value);
+            case Some<T>(T value) -> predicate.test(value);
             case None<T> ignored -> false;
         };
     }
@@ -92,9 +97,10 @@ public sealed interface Option<T>
      *
      * @return the stream that contains the value of {@code Some<T>} and is empty otherwise
      */
+    @Contract(pure = true)
     default @NotNull Stream<T> stream() {
         return switch (this) {
-            case Some<T> some -> Stream.of(some.value);
+            case Some<T>(T value) -> Stream.of(value);
             case None<T> ignored -> Stream.of();
         };
     }
@@ -110,7 +116,7 @@ public sealed interface Option<T>
      */
     default @NotNull T expect(String errorMessage) throws @NotNull NoSuchElementException {
         return switch (this) {
-            case Some<T> some -> some.value;
+            case Some<T>(T value) -> value;
             case None<T> ignored -> throw new NoSuchElementException(errorMessage);
         };
     }
@@ -123,9 +129,9 @@ public sealed interface Option<T>
      *
      * @throws E with the given Exception when the {@code Option<T>} is {@code None<T>}
      */
-    default @NotNull <E extends Exception> T expect(@NonNull E errorMessage) throws @NotNull E {
+    default @NotNull <E extends Exception> T expect(@NonNull  E errorMessage) throws @NotNull E {
         return switch (this) {
-            case Some<T> some -> some.value;
+            case Some<T>(T value) -> value;
             case None<T> ignored -> throw errorMessage;
         };
     }
@@ -138,10 +144,10 @@ public sealed interface Option<T>
      *
      * @throws E with the given Exception when the {@code Option<T>} is {@code None<T>}
      */
-    default @NotNull <E extends Exception> T expectElse(@NotNull @NonNull Supplier<@NotNull E> exceptionSupplier) throws
+    default @NotNull <E extends Exception> T expectElse(@NotNull @NonNull  Supplier<@NotNull E> exceptionSupplier) throws
                                                                                                                   @NotNull E {
         return switch (this) {
-            case Some<T> some -> some.value;
+            case Some<T>(T value) -> value;
             case None<T> ignored -> throw exceptionSupplier.get();
         };
     }
@@ -158,9 +164,10 @@ public sealed interface Option<T>
      *
      * @throws java.util.NoSuchElementException when the {@code Option<T>} is {@code None<T>}
      */
+    @Contract(pure = true)
     default @NotNull T unwrap() throws @NotNull NoSuchElementException {
         return switch (this) {
-            case Some<T> some -> some.value;
+            case Some<T>(T value) -> value;
             case None<T> ignored ->
                     throw new NoSuchElementException("Option was unwrapped but it had no value!");
         };
@@ -177,9 +184,10 @@ public sealed interface Option<T>
      *
      * @return the value if the {@code Option<T>} is {@code Some<T>} and the default value otherwise
      */
-    default T unwrapOr(T defaultValue) {
+    @Contract(pure = true)
+    default @Nullable T unwrapOr(@Nullable T defaultValue) {
         return switch (this) {
-            case Some<T> some -> some.value;
+            case Some<T>(T value) -> value;
             case None<T> ignored -> defaultValue;
         };
     }
@@ -192,9 +200,9 @@ public sealed interface Option<T>
      *
      * @return the value in {@code Some<T>} or the result of the {@code Supplier<T>}
      */
-    default T unwrapOrElse(@NotNull @NonNull Supplier<? extends @NotNull T> supplier) {
+    default @Nullable T unwrapOrElse(@NotNull @NonNull  Supplier<? extends @Nullable T> supplier) {
         return switch (this) {
-            case Some<T> some -> some.value;
+            case Some<T>(T value) -> value;
             case None<T> ignored -> supplier.get();
         };
     }
@@ -209,9 +217,9 @@ public sealed interface Option<T>
      * @return a new {@code Option<R>} with the converted value
      */
     @Override
-    default <R> @NotNull Option<R> map(@NotNull @NonNull Function<? super @NotNull T, ? extends @NotNull R> f) {
+    default <R> @NotNull Option<R> map(@NotNull @NonNull  Function<? super @NotNull T, ? extends @NotNull R> f) {
         return switch (this) {
-            case Some<T> some -> some(f.apply(some.value));
+            case Some<T>(T value) -> some(f.apply(value));
             case None<T> ignored -> none();
         };
     }
@@ -229,9 +237,9 @@ public sealed interface Option<T>
      *
      * @return the {@code Option<T>} it was called on
      */
-    default @NotNull Option<T> inspect(@NotNull @NonNull Consumer<? super @NotNull T> consumer) {
-        if (this instanceof Some<T> some) {
-            consumer.accept(some.value);
+    default @NotNull Option<T> inspect(@NotNull @NonNull  Consumer<? super @NotNull T> consumer) {
+        if (this instanceof Some<T>(T value)) {
+            consumer.accept(value);
         }
         return this;
     }
@@ -240,7 +248,7 @@ public sealed interface Option<T>
      * Returns the provided default result (if {@code None<T>}), or applies a {@code Fuction<T,R>}
      * to the contained value (if {@code Some}).
      * <p>
-     * Arguments passed to {@link the.oronco.adt.Option#mapOr(Object, java.util.function.Function)} are eagerly evaluated; if you are
+     * Arguments passed to {@link the.oronco.adt.Option#mapOr(java.util.function.Function, Object)} (Object, java.util.function.Function)} are eagerly evaluated; if you are
      * passing the result of a function call, it is recommended to use
      * {@link the.oronco.adt.Option#mapOrElse(java.util.function.Supplier, java.util.function.Function)}, which is lazily evaluated.
      *
@@ -250,10 +258,10 @@ public sealed interface Option<T>
      *
      * @return the mapped value or the default value if {@code None<T>}
      */
-    default <R> R mapOr(R defaultValue,
-                        @NotNull @NonNull Function<? super @NotNull T, ? extends @NotNull R> f) {
+    default <R> @Nullable R mapOr(
+            @NotNull @NonNull Function<? super @NotNull T, ? extends @NotNull R> f, @Nullable R defaultValue) {
         return switch (this) {
-            case Some<T> some -> f.apply(some.value);
+            case Some<T>(T value) -> f.apply(value);
             case None<T> ignored -> defaultValue;
         };
     }
@@ -268,10 +276,10 @@ public sealed interface Option<T>
      *
      * @return the mapped value or the default value if {@code None}
      */
-    default <R> R mapOrElse(@NotNull @NonNull Supplier<? extends @NotNull R> defaultSupplier,
+    default <R> @Nullable R mapOrElse(@NotNull @NonNull Supplier<? extends @Nullable R> defaultSupplier,
                             @NotNull @NonNull Function<? super @NotNull T, ? extends @NotNull R> f) {
         return switch (this) {
-            case Some<T> some -> f.apply(some.value);
+            case Some<T>(T value) -> f.apply(value);
             case None<T> ignored -> defaultSupplier.get();
         };
     }
@@ -289,9 +297,10 @@ public sealed interface Option<T>
      *
      * @return a result representing the {@code Option<T>} in form of a {@code Result<T, E>}
      */
+    @Contract(value = "_ -> new", pure = true)
     default <E> @NotNull Result<T, E> okOr(@NotNull @NonNull E err) {
         return switch (this) {
-            case Some<T> some -> Result.ok(some.value);
+            case Some<T>(T value) -> Result.ok(value);
             case None<T> ignored -> Result.err(err);
         };
     }
@@ -305,9 +314,10 @@ public sealed interface Option<T>
      *
      * @return a result representing the {@code Option<T>} in form of a {@code Result<T, E>}
      */
+    @Contract("_ -> new")
     default <E> @NotNull Result<T, E> okOrElse(@NotNull @NonNull Supplier<? extends @NotNull E> err) {
         return switch (this) {
-            case Some<T> some -> Result.ok(some.value);
+            case Some<T>(T value) -> Result.ok(value);
             case None<T> ignored -> Result.err(err.get());
         };
     }
@@ -322,7 +332,7 @@ public sealed interface Option<T>
      */
     default @NotNull Condition<T> alwaysMaintain(@NotNull @NonNull Predicate<? super @NotNull T> condition){
         return switch (this){
-            case Option.Some<T> some -> Condition.from(some.value, condition);
+            case Option.Some<T>(T value) -> Condition.from(value, condition);
             case Option.None<T> ignored -> Condition.holdsNot();
         };
     }
@@ -334,18 +344,20 @@ public sealed interface Option<T>
      *
      * @return an {@code Iterator<T>} over the possibly contained value
      */
+    @Contract(pure = true)
     default @NotNull Iterator<T> iter() {
         return switch (this) {
-            case Some<T> some -> Stream.of(some.value)
+            case Some<T>(T value) -> Stream.of(value)
                                        .iterator();
             case None<T> ignored -> Collections.emptyIterator();
         };
     }
 
     @Override
+    @Contract(pure = true)
     default @NotNull Iterator<T> iterator() {
         return switch (this) {
-            case Some<T> some -> Stream.of(some.value)
+            case Some<T>(T value) -> Stream.of(value)
                                        .iterator();
             case None<T> ignored -> Collections.emptyIterator();
         };
@@ -363,6 +375,7 @@ public sealed interface Option<T>
      *
      * @return either the {@code other} {@code Option<U>} or {@code None} when this is {@code None}
      */
+    @Contract(pure = true)
     default <U> @NotNull Option<U> and(@NotNull @NonNull Option<U> other) {
         return switch (this) {
             case Some<T> ignored -> other;
@@ -384,7 +397,7 @@ public sealed interface Option<T>
      */
     default <U> @NotNull Option<? extends U> andThen(@NotNull @NonNull Function<? super @NotNull T, Option<? extends @NotNull U>> other) {
         return switch (this) {
-            case Some<T> some -> other.apply(some.value);
+            case Some<T>(T value) -> other.apply(value);
             case None<T> ignored -> none();
         };
     }
@@ -409,10 +422,11 @@ public sealed interface Option<T>
      * {@code Predicate<? super T>} or {@code None<T>}
      */
     @Override
+    @Contract("_ -> !null")
     default @NotNull Option<T> filter(@NotNull @NonNull Predicate<? super @NotNull T> predicate) {
-        if (this instanceof Some<T> some) {
-            if (predicate.test(some.value)) {
-                return some(some.value);
+        if (this instanceof Some<T>(T value)) {
+            if (predicate.test(value)) {
+                return some(value);
             }
         }
         return none();
@@ -430,9 +444,10 @@ public sealed interface Option<T>
      * @return an {@code Option<T>} that is either {@code this} or the {@code other}
      * {@code Option<T>}
      */
+    @Contract(pure = true)
     default @NotNull Option<T> or(@NotNull @NonNull Option<T> other) {
         return switch (this) {
-            case Some<T> some -> some(some.value);
+            case Some<T>(T value) -> some(value);
             case None<T> ignored -> other;
         };
     }
@@ -452,9 +467,10 @@ public sealed interface Option<T>
      * @return an {@code Option<T>} that is either {@code this} or the {@code other} wrapped in an
      * {@code Option<T>}
      */
-    default @NotNull Option<T> orNullable(@NotNull @NonNull T other) {
+    @Contract(value = "_ -> new", pure = true)
+    default @NotNull Option<T> orNullable(@NotNull T other) {
         return switch (this) {
-            case Some<T> some -> some(some.value);
+            case Some<T>(T value) -> some(value);
             case None<T> ignored -> Option.from(other);
         };
     }
@@ -471,7 +487,7 @@ public sealed interface Option<T>
      */
     default <S extends T> @NotNull Option<? extends T> orElse(@NotNull @NonNull Supplier<@NotNull Option<S>> other) {
         return switch (this) {
-            case Some<T> some -> some(some.value);
+            case Some<T>(T value) -> some(value);
             case None<T> ignored -> other.get();
         };
     }
@@ -486,9 +502,10 @@ public sealed interface Option<T>
      * @return the {@code Option<T>} if it contains a value, otherwise calls the {@code Supplier}
      * and returns the result in an {@code Option<T>}
      */
-    default <S extends T> @NotNull Option<T> orNullableElse(@NotNull @NonNull Supplier<@NotNull S> other) {
+    @Contract("_ -> new")
+    default <S extends T> @NotNull Option<T> orNullableElse(@NotNull @NonNull Supplier<S> other) {
         return switch (this) {
-            case Some<T> some -> some(some.value);
+            case Some<T>(T value) -> some(value);
             case None<T> ignored -> Option.from(other.get());
         };
     }
@@ -501,14 +518,13 @@ public sealed interface Option<T>
      *
      * @return an {Option<T>} according to the above condition
      */
+    @Contract(value = "_ -> new", pure = true)
     default @NotNull Option<T> xOr(@NotNull @NonNull Option<T> other) {
-        if (this instanceof Some<T> some && !(other instanceof Some<T>)) {
-            return some(some.value);
-        } else if (!(this instanceof Some<T>) && other instanceof Some<T> some) {
-            return some(some.value);
-        } else {
-            return none();
-        }
+        return switch (this){
+            case Some<T>(T thisValue) when !(other instanceof Some<T>) -> some(thisValue);
+            case None<T> ignored when other instanceof Some<T>(T otherValue) -> some(otherValue);
+            default -> none();
+        };
     }
 
     /**
@@ -516,6 +532,7 @@ public sealed interface Option<T>
      *
      * @return an optional containing the value of the option
      */
+    @Contract(value = "-> new", pure = true)
     @Override
     default @NotNull Optional<T> j() {
         return toOptional();
@@ -526,19 +543,22 @@ public sealed interface Option<T>
      *
      * @return an optional containing the value of the option
      */
+    @Contract(value = "-> new", pure = true)
     default @NotNull Optional<T> toOptional() {
         return switch (this) {
-            case Some<T> some -> Optional.of(some.value);
+            case Some<T>(T value) -> Optional.of(value);
             case None<T> ignored -> Optional.empty();
         };
     }
 
+    @Contract(value = "_ -> new", pure = true)
     static <T> @NotNull Option<T> optionFrom(@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
                                              @NotNull @NonNull Optional<T> optional) {
         return optional.map(Option::some)
                        .orElseGet(Option::none);
     }
 
+    @Contract(value = "_ -> new", pure = true)
     static <T> @NotNull Option<T> from(T value) {
         if (value == null) {
             return none();
@@ -552,16 +572,18 @@ public sealed interface Option<T>
     static <T> @NotNull Option<T> of(@NotNull @NonNull Streamable<T> streamable) {
         return switch (MultiOption.of(streamable)) {
             case MultiOption.Many<T> ignored -> none();
-            case MultiOption.One<T> one -> some(one.value());
+            case MultiOption.One<T>(T value) -> some(value);
             case MultiOption.None<T> ignored -> none();
         };
     }
 
 
+    @Contract(value = "_ -> new", pure = true)
     static <T> @NotNull Option<T> some(@NotNull T value) {
         return new Some<>(value);
     }
 
+    @Contract(value = "_ -> new", pure = true)
     static <T> @NotNull Result<Option<T>, GivenValueWasNullError> someSafe(@NotNull T value){
         //noinspection ConstantValue
         if (value != null) {
@@ -571,16 +593,18 @@ public sealed interface Option<T>
         }
     }
 
+    @Contract(value = "-> !null", pure = true)
     @SuppressWarnings("unchecked")
     static <T> @NotNull Option<T> none() {
         return (Option<T>) NONE;
     }
 
     @Override
+    @Contract(value = "-> new", pure = true)
     default @NotNull ControlFlow<Option<Infallible>, T> branch() {
         return switch (this) {
-            case Option.Some<T> some -> new ControlFlow.Continue<>(some.value);
-            case Option.None<T> ignored -> new ControlFlow.Break<>(none());
+            case Some<T>(T value) -> new ControlFlow.Continue<>(value);
+            case None<T> ignored -> new ControlFlow.Break<>(none());
         };
     }
 }

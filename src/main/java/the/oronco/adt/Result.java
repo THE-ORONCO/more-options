@@ -1,5 +1,17 @@
 package the.oronco.adt;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+import lombok.NonNull;
+import org.intellij.lang.annotations.MagicConstant;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Unmodifiable;
+import org.springframework.data.util.Streamable;
+import the.oronco.Rusty;
+import the.oronco.adt.ControlFlow.Break;
+import the.oronco.adt.ControlFlow.Continue;
+
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.Iterator;
@@ -11,63 +23,39 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-import lombok.AccessLevel;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
-import lombok.ToString;
-import org.jetbrains.annotations.NotNull;
-import org.springframework.data.util.Streamable;
-import the.oronco.Rusty;
-import the.oronco.adt.ControlFlow.Break;
-import the.oronco.adt.ControlFlow.Continue;
-
 // TODO examples like in the rust documentation
 // TODO replace exceptions with better exceptions
 // TODO tests
+@Unmodifiable
 public sealed interface Result<T, E>
         extends Rusty<Optional<T>>, Try<T, Result<Infallible, E>>, Streamable<T>, Serializable {
     /**
      * When the Result should be an OK but the actual value does not matter.
      */
+    @Unmodifiable
     @NoArgsConstructor(access = AccessLevel.PRIVATE)
     class GOOD {
     }
-
+    @MagicConstant
     Result.GOOD GOOD = new GOOD();
 
-    @ToString
-    @EqualsAndHashCode
-    final class Ok<T, E> implements Result<@NotNull T, @NotNull E> {
-        private Ok(@NotNull @NonNull T result) {
-            this.result = result;
-        }
-
-        private final @NotNull T result;
-
-        public @NotNull T result() {
-            return result;
+    @Unmodifiable
+    record Ok<T, E>(@NotNull @NonNull T result) implements Result<@NotNull T, @NotNull E> {
+        @Contract(value = "-> new", pure = true)
+        public <F> Result<T, F> as() {
+            return Result.ok(this.result);
         }
     }
-
-    @ToString
-    @EqualsAndHashCode
-    final class Err<T, E> implements Result<T, E> {
-        private final E error;
-
-        private Err(@NotNull @NonNull E error) {
-            this.error = error;
-        }
-
-        public @NotNull E error() {
-            return error;
-        }
-
+    @Unmodifiable
+    record Err<T, E>(@NotNull @NonNull E error) implements Result<T, E> {
+        @Contract(value = "-> new", pure = true)
+        @Unmodifiable
         public <R> Result<R, E> as() {
             return Result.err(this.error);
         }
     }
 
+    @Contract(pure = true)
     default boolean isOk() {
         return switch (this) {
             case Ok<T, E> ignored -> true;
@@ -84,7 +72,7 @@ public sealed interface Result<T, E>
      */
     default boolean isOkAnd(@NotNull @NonNull Predicate<? super @NotNull T> predicate) {
         return switch (this) {
-            case Ok<T, E> ok -> predicate.test(ok.result);
+            case Ok<T, E>(T result) -> predicate.test(result);
             case Err<T, E> ignored -> false;
         };
     }
@@ -106,7 +94,7 @@ public sealed interface Result<T, E>
     default boolean isErrAnd(@NotNull @NonNull Predicate<? super @NotNull E> predicate) {
         return switch (this) {
             case Ok<T, E> ignored -> false;
-            case Err<T, E> err -> predicate.test(err.error);
+            case Err<T, E>(E error) -> predicate.test(error);
         };
     }
 
@@ -117,7 +105,7 @@ public sealed interface Result<T, E>
      */
     default @NotNull Option<T> ok() {
         return switch (this) {
-            case Ok<T, E> ok -> Option.some(ok.result);
+            case Ok<T, E>(T result) -> Option.some(result);
             case Err<T, E> ignored -> Option.none();
         };
     }
@@ -130,7 +118,7 @@ public sealed interface Result<T, E>
     default @NotNull Option<E> err() {
         return switch (this) {
             case Ok<T, E> ignored -> Option.none();
-            case Err<T, E> err -> Option.some(err.error);
+            case Err<T, E>(E error) -> Option.some(error);
         };
     }
 
@@ -149,7 +137,7 @@ public sealed interface Result<T, E>
     default <U> @NotNull Result<U, E> map(@NotNull @NonNull Function<? super @NotNull T, ? extends @NotNull U> f) {
         return switch (this) {
             case Ok<T, E> ok -> ok(f.apply(ok.result));
-            case Err<T, E> err -> err(err.error);
+            case Err<T, E>(E error) -> err(error);
         };
     }
 
@@ -169,7 +157,7 @@ public sealed interface Result<T, E>
     default <U> @NotNull U mapOr(@NotNull @NonNull U defaultValue,
                                  Function<? super @NotNull T, ? extends @NotNull U> f) {
         return switch (this) {
-            case Ok<T, E> ok -> f.apply(ok.result);
+            case Ok<T, E>(T result) -> f.apply(result);
             case Err<T, E> ignored -> defaultValue;
         };
     }
@@ -191,7 +179,7 @@ public sealed interface Result<T, E>
                             @NotNull @NonNull Function<? super @NotNull T, ? extends @NotNull U> f) {
         return switch (this) {
             case Ok<T, E> ok -> f.apply(ok.result);
-            case Err<T, E> err -> d.apply(err.error);
+            case Err<T, E>(E error) -> d.apply(error);
         };
     }
 
@@ -209,8 +197,8 @@ public sealed interface Result<T, E>
      */
     default <U> Result<T, U> mapErr(@NotNull @NonNull Function<? super @NotNull E, ? extends @NotNull U> f) {
         return switch (this) {
-            case Ok<T, E> ok -> ok(ok.result);
-            case Err<T, E> err -> err(f.apply(err.error));
+            case Ok<T, E>(T result) -> ok(result);
+            case Err<T, E>(E error) -> err(f.apply(error));
         };
     }
 
@@ -227,8 +215,8 @@ public sealed interface Result<T, E>
      * @return the result it was called on
      */
     default @NotNull Result<T, E> inspect(@NotNull @NonNull Consumer<? super @NotNull T> f) {
-        if (this instanceof Ok<T, E> ok) {
-            f.accept(ok.result);
+        if (this instanceof Ok<T, E>(T result)) {
+            f.accept(result);
         }
         return this;
     }
@@ -245,8 +233,8 @@ public sealed interface Result<T, E>
      * @return the result it was called on
      */
     default @NotNull Result<T, E> inspectErr(@NotNull @NonNull Consumer<? super @NotNull E> f) {
-        if (this instanceof Err<T, E> err) {
-            f.accept(err.error);
+        if (this instanceof Err<T, E>(E error)) {
+            f.accept(error);
         }
         return this;
     }
@@ -254,7 +242,7 @@ public sealed interface Result<T, E>
     @Override
     default @NotNull Iterator<T> iterator() {
         return switch (this) {
-            case Ok<T, E> ok -> Stream.of(ok.result)
+            case Ok<T, E>(T result) -> Stream.of(result)
                                       .iterator();
             case Err<T, E> ignored -> Collections.emptyIterator();
         };
@@ -263,19 +251,16 @@ public sealed interface Result<T, E>
     // TODO use custom iterator
     default @NotNull Iterator<T> iter() {
         return switch (this) {
-            case Ok<T, E> ok -> Stream.of(ok.result)
+            case Ok<T, E>(T result) -> Stream.of(result)
                                       .iterator();
-            case Err<T, E> ignored -> new Iterator<>() {
-                @Override
-                public boolean hasNext() {
-                    return false;
-                }
-
-                @Override
-                public T next() {
-                    return null;
-                }
-            };
+            case Err<T, E> ignored -> Collections.emptyIterator();
+        };
+    }
+    @Override
+    default @NotNull Stream<T> stream() {
+        return switch (this) {
+            case Ok<T, E>(T result) -> Stream.of(result);
+            case Err<T, E> ignored -> Stream.of();
         };
     }
 
@@ -294,7 +279,7 @@ public sealed interface Result<T, E>
      */
     default @NotNull T expect(String message) throws @NotNull NoSuchElementException {
         return switch (this) {
-            case Ok<T, E> ok -> ok.result;
+            case Ok<T, E>(T result) -> result;
             case Err<T, E> ignored -> throw new NoSuchElementException(message);
         };
     }
@@ -315,7 +300,7 @@ public sealed interface Result<T, E>
     default <X extends Exception> @NotNull T expect(@NotNull @NonNull X exception) throws
                                                                                    @NotNull X {
         return switch (this) {
-            case Ok<T, E> ok -> ok.result;
+            case Ok<T, E>(T result) -> result;
             case Err<T, E> ignored -> throw exception;
         };
     }
@@ -337,7 +322,7 @@ public sealed interface Result<T, E>
     default <X extends Exception> @NotNull T expectElse(@NotNull @NonNull Function<? super @NotNull E, @NotNull X> exceptionSupplier) throws
                                                                                                                                       @NotNull X {
         return switch (this) {
-            case Ok<T, E> ok -> ok.result;
+            case Ok<T, E>(T result) -> result;
             case Err<T, E> err -> throw exceptionSupplier.apply(err.error);
         };
     }
@@ -356,10 +341,10 @@ public sealed interface Result<T, E>
      */
     default @NotNull T unwrap() throws @NotNull NoSuchElementException {
         return switch (this) {
-            case Ok<T, E> ok -> ok.result;
-            case Err<T, E> err ->
+            case Ok<T, E>(T result) -> result;
+            case Err<T, E>(E error) ->
                     throw new NoSuchElementException("Result was unwrapped but it was Err: %s".formatted(
-                            err.error));
+                            error));
         };
     }
 
@@ -375,7 +360,7 @@ public sealed interface Result<T, E>
      */
     default @NotNull T unwrapOr(@NotNull @NonNull T defaultValue) {
         return switch (this) {
-            case Ok<T, E> ok -> ok.result;
+            case Ok<T, E>(T result) -> result;
             case Err<T, E> ignored -> defaultValue;
         };
     }
@@ -395,8 +380,8 @@ public sealed interface Result<T, E>
 
     default @NotNull T unwrapOrElse(@NotNull @NonNull Supplier<? extends @NotNull T> defaultSupplier) {
         return switch (this) {
-            case Ok<T, E> ok -> ok.result;
-            case Err<T, E> err -> defaultSupplier.get();
+            case Ok<T, E>(T result) -> result;
+            case Err<T, E> ignored -> defaultSupplier.get();
         };
     }
 
@@ -412,7 +397,7 @@ public sealed interface Result<T, E>
     default @NotNull E expectErr(String message) throws @NotNull NoSuchElementException {
         return switch (this) {
             case Ok<T, E> ignored -> throw new NoSuchElementException(message);
-            case Err<T, E> err -> err.error;
+            case Err<T, E>(E error) -> error;
         };
     }
 
@@ -429,7 +414,7 @@ public sealed interface Result<T, E>
                                                                                       @NotNull X {
         return switch (this) {
             case Ok<T, E> ignored -> throw exception;
-            case Err<T, E> err -> err.error;
+            case Err<T, E>(E error) -> error;
         };
     }
 
@@ -446,8 +431,8 @@ public sealed interface Result<T, E>
     default <X extends Exception> @NotNull E expectErrElse(@NonNull @NotNull Function<? super @NotNull T, ? extends @NotNull X> exceptionSupplier) throws
                                                                                                                                                    @NotNull X {
         return switch (this) {
-            case Ok<T, E> ok -> throw exceptionSupplier.apply(ok.result);
-            case Err<T, E> err -> err.error;
+            case Ok<T, E>(T result) -> throw exceptionSupplier.apply(result);
+            case Err<T, E>(E error) -> error;
         };
     }
 
@@ -461,10 +446,10 @@ public sealed interface Result<T, E>
      */
     default @NotNull E unwrapErr() throws @NotNull NoSuchElementException {
         return switch (this) {
-            case Ok<T, E> ok ->
+            case Ok<T, E>(T result) ->
                     throw new NoSuchElementException("Result was unwrapped but it was Ok: %s".formatted(
-                            ok.result));
-            case Err<T, E> err -> err.error;
+                            result));
+            case Err<T, E>(E error) -> error;
         };
     }
 
@@ -485,7 +470,7 @@ public sealed interface Result<T, E>
     default <U> @NotNull Result<U, E> and(@NotNull @NonNull Result<U, E> other) {
         return switch (this) {
             case Ok<T, E> ignored -> other;
-            case Err<T, E> err -> err(err.error);
+            case Err<T, E>(E error) -> err(error);
         };
     }
 
@@ -504,7 +489,7 @@ public sealed interface Result<T, E>
     default <U> @NotNull Result<? extends U, ? extends E> andThen(@NotNull @NonNull Supplier<@NotNull Result<? extends U, ? extends E>> f) {
         return switch (this) {
             case Ok<T, E> ignored -> f.get();
-            case Err<T, E> err -> err(err.error);
+            case Err<T, E>(E error) -> err(error);
         };
     }
 
@@ -523,7 +508,7 @@ public sealed interface Result<T, E>
      */
     default <F> @NotNull Result<T, F> or(@NotNull @NonNull Result<T, F> other) {
         return switch (this) {
-            case Ok<T, E> ok -> ok(ok.result);
+            case Ok<T, E>(T result) -> ok(result);
             case Err<T, E> ignored -> other;
         };
     }
@@ -542,7 +527,7 @@ public sealed interface Result<T, E>
      */
     default <F> @NotNull Result<? extends T, ? extends F> orThen(@NotNull @NonNull Supplier<Result<? extends T, ? extends F>> f) {
         return switch (this) {
-            case Ok<T, E> ok -> ok(ok.result);
+            case Ok<T, E>(T result) -> ok(result);
             case Err<T, E> ignored -> f.get();
         };
     }
@@ -550,8 +535,8 @@ public sealed interface Result<T, E>
     @Override
     default @NotNull Optional<T> j() {
         return switch (this) {
+            case Result.Ok<T, E>(T result) -> Optional.of(result);
             case Result.Err<T, E> ignored -> Optional.empty();
-            case Result.Ok<T, E> result -> Optional.of(result.result);
         };
     }
 
@@ -568,16 +553,16 @@ public sealed interface Result<T, E>
 
     static <T, E> @NotNull Result<T, E> from(T value, @NotNull @NonNull E error) {
         return switch (Option.from(value)) {
+            case Option.Some<T>(T val) -> ok(val);
             case Option.None<T> ignored -> err(error);
-            case Option.Some<T> some -> ok(some.value());
         };
     }
 
     static <T, E> @NotNull Result<T, ? extends E> fromElse(T value,
                                                            @NotNull @NonNull Supplier<? extends @NotNull E> errorSupplier) {
         return switch (Option.from(value)) {
+            case Option.Some<T>(T val) -> ok(val);
             case Option.None<T> ignored -> err(errorSupplier.get());
-            case Option.Some<T> some -> ok(some.value());
         };
     }
 
@@ -586,8 +571,8 @@ public sealed interface Result<T, E>
      */
     static <T> @NotNull Result<Iterable<T>, Exception> of(@NotNull @NonNull Streamable<T> streamable) {
         return switch (MultiOption.of(streamable)) {
-            case MultiOption.One<T> one -> ok(Collections.singleton(one.value()));
-            case MultiOption.Many<T> many -> ok(many.values());
+            case MultiOption.One<T>(T value) -> ok(Collections.singleton(value));
+            case MultiOption.Many<T>(var values) -> ok(values);
             // TODO check if I can intercept JPA failures somehow and return that error instead
             case MultiOption.None<T> ignored ->
                     err(new NoSuchElementException("No Element found in stream!"));
@@ -596,8 +581,8 @@ public sealed interface Result<T, E>
 
     default @NotNull ControlFlow<Result<Infallible, E>, T> branch() {
         return switch (this) {
-            case Result.Ok<T, E> ok -> new Continue<>(ok.result);
-            case Result.Err<T, E> err -> new Break<>(err(err.error));
+            case Result.Ok<T, E>(T result) -> new Continue<>(result);
+            case Result.Err<T, E>(E error) -> new Break<>(err(error));
         };
     }
 }
