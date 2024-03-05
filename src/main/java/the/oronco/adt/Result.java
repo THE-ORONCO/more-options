@@ -11,6 +11,8 @@ import org.springframework.data.util.Streamable;
 import the.oronco.Rusty;
 import the.oronco.adt.ControlFlow.Break;
 import the.oronco.adt.ControlFlow.Continue;
+import the.oronco.adt.exceptions.WrongKindOfExceptionError;
+import the.oronco.adt.funcs.ThrowingFunction;
 
 import java.io.Serializable;
 import java.util.Collections;
@@ -142,12 +144,38 @@ public sealed interface Result<T, E>
     }
 
     /**
+     * Maps a {@code Result<T, E>} to {@code Result<U, E>} by applying a function to a contained {@code Ok<T, E>} value, leaving an {@code Err<T, E>}
+     * value untouched.
+     * <p>
+     * When the method throws the expected Exception it will be converted into an error with the other supplied function.
+     * <p>
+     * This function can be used to compose the results of two functions.
+     *
+     * @param <U> result type of the conversion if {@code this} result was {@code Ok<T,E>}
+     * @param <X> type of the Exception that might be thrown by the method
+     * @param f   function that can convert {@code T} to {@code U}
+     * @param ef  function that can convert {@code X} to {@code E} to create an error in the throwing case
+     * @return a new result with a converted value
+     */
+    default <U, X extends Exception> @NotNull Result<U, E> safeMap(
+            @NotNull @NonNull ThrowingFunction<? super @NotNull T, ? extends @NotNull U, ? extends @NotNull X> f,
+            @NotNull @NonNull Function<? super @NotNull X, ? extends @NotNull E> ef) throws WrongKindOfExceptionError {
+        return switch (this) {
+            case Ok<T, E> ok -> switch (f.apply(ok.result)){
+                case Ok<? extends U, ? extends X>(U result) -> Result.ok(result);
+                case Err<? extends U, ? extends X>(X exception) -> Result.err(ef.apply(exception));
+            };
+            case Err<T, E>(E error) -> err(error);
+        };
+    }
+
+    /**
      * Returns the provided default (if {@code Err<T,E>}), or applies a function to the contained
      * value (if {@code Ok<T, E>}),
      * <p>
-     * Arguments passed to {@link Result#mapOr(Object, Function)} are eagerly evaluated; if you are
+     * Arguments passed to {@link the.oronco.adt.Result#mapOr(Object, java.util.function.Function)} are eagerly evaluated; if you are
      * passing the result of a function call, it is recommended to use
-     * {@link Result#mapOrElse(Function, Function)}, which is lazily evaluated.
+     * {@link the.oronco.adt.Result#mapOrElse(java.util.function.Function, java.util.function.Function)}, which is lazily evaluated.
      *
      * @param f   function that can convert {@code T} to {@code U}
      * @param <U> result type of the conversion if {@code this} result was {@code Ok<T,E>}
@@ -269,13 +297,13 @@ public sealed interface Result<T, E>
      * <p>
      * Because this function may throw, its use is generally discouraged. Instead, prefer to use
      * pattern matching and handle the {@code Err<T, E>} case explicitly, or call
-     * {@link Result#unwrapOr(Object)} or {@link Result#unwrapOrElse(Supplier)}.
+     * {@link the.oronco.adt.Result#unwrapOr(Object)} or {@link the.oronco.adt.Result#unwrapOrElse(java.util.function.Supplier)}.
      *
      * @param message the message of the thrown error
      *
      * @return the successful result
      *
-     * @throws NoSuchElementException when {@code this} is an {@code Err<T, E>}
+     * @throws java.util.NoSuchElementException when {@code this} is an {@code Err<T, E>}
      */
     default @NotNull T expect(String message) throws @NotNull NoSuchElementException {
         return switch (this) {
@@ -289,7 +317,7 @@ public sealed interface Result<T, E>
      * <p>
      * Because this function may throw, its use is generally discouraged. Instead, prefer to use
      * pattern matching and handle the {@code Err<T, E>} case explicitly, or call
-     * {@link Result#unwrapOr(Object)} or {@link Result#unwrapOrElse(Supplier)}.
+     * {@link the.oronco.adt.Result#unwrapOr(Object)} or {@link the.oronco.adt.Result#unwrapOrElse(java.util.function.Supplier)}.
      *
      * @param exception the thrown exception
      *
@@ -310,7 +338,7 @@ public sealed interface Result<T, E>
      * <p>
      * Because this function may throw, its use is generally discouraged. Instead, prefer to use
      * pattern matching and handle the {@code Err<T, E>} case explicitly, or call
-     * {@link Result#unwrapOr(Object)} or {@link Result#unwrapOrElse(Supplier)}.
+     * {@link the.oronco.adt.Result#unwrapOr(Object)} or {@link the.oronco.adt.Result#unwrapOrElse(java.util.function.Supplier)}.
      *
      * @param exceptionSupplier the supplier of the thrown exception which takes the contained error
      *                          as an input
@@ -332,11 +360,11 @@ public sealed interface Result<T, E>
      * <p>
      * Because this function may throw, its use is generally discouraged. Instead, prefer to use
      * pattern matching and handle the {@code Err<T, E>} case explicitly, or call
-     * {@link Result#unwrapOr(Object)} or {@link Result#unwrapOrElse(Supplier)}.
+     * {@link the.oronco.adt.Result#unwrapOr(Object)} or {@link the.oronco.adt.Result#unwrapOrElse(java.util.function.Supplier)}.
      *
      * @return the successful result
      *
-     * @throws NoSuchElementException when {@code this} is an {@code Err<T, E>}; the message is
+     * @throws java.util.NoSuchElementException when {@code this} is an {@code Err<T, E>}; the message is
      *                                provided by the {@code Err<T, E>}s value
      */
     default @NotNull T unwrap() throws @NotNull NoSuchElementException {
@@ -392,7 +420,7 @@ public sealed interface Result<T, E>
      *
      * @return the successful result
      *
-     * @throws NoSuchElementException when {@code this} is an {@code Ok<T, E>}
+     * @throws java.util.NoSuchElementException when {@code this} is an {@code Ok<T, E>}
      */
     default @NotNull E expectErr(String message) throws @NotNull NoSuchElementException {
         return switch (this) {
@@ -441,7 +469,7 @@ public sealed interface Result<T, E>
      *
      * @return the successful result
      *
-     * @throws NoSuchElementException when {@code this} is an {@code Ok<T, E>}; the message is
+     * @throws java.util.NoSuchElementException when {@code this} is an {@code Ok<T, E>}; the message is
      *                                provided by the {@code Ok<T, E>}s value
      */
     default @NotNull E unwrapErr() throws @NotNull NoSuchElementException {
@@ -458,7 +486,7 @@ public sealed interface Result<T, E>
      * {@code Err<T, E>} value of {@code this}.
      * <p>
      * Arguments passed to {@code and()} are eagerly evaluated; if you are passing the result of a
-     * function call, it is recommended to use {@link Result#andThen(Supplier)}, which is lazily
+     * function call, it is recommended to use {@link the.oronco.adt.Result#andThen(java.util.function.Supplier)}, which is lazily
      * evaluated.
      *
      * @param other another result which should conditionally be returned depending on the success
@@ -498,7 +526,7 @@ public sealed interface Result<T, E>
      * {@code Ok<T, F>} value of {@code this}.
      * <p>
      * Arguments passed to {@code or()} are eagerly evaluated; if you are passing the result of a
-     * function call, it is recommended to use {@link Result#orThen(Supplier)}, which is lazily
+     * function call, it is recommended to use {@link the.oronco.adt.Result#orThen(java.util.function.Supplier)}, which is lazily
      * evaluated.
      *
      * @param other the fallback result in case {@code this} is an {@code Err<T, E>}
@@ -535,7 +563,7 @@ public sealed interface Result<T, E>
     @Override
     default @NotNull Optional<T> j() {
         return switch (this) {
-            case Result.Ok<T, E>(T result) -> Optional.of(result);
+            case Ok<T, E>(T result) -> Optional.of(result);
             case Result.Err<T, E> ignored -> Optional.empty();
         };
     }
@@ -548,7 +576,7 @@ public sealed interface Result<T, E>
         return new Ok<>(result);
     }
     static <E> @NotNull Ok<GOOD, E> good() {
-        return new Ok<>(Result.GOOD);
+        return new Ok<>(GOOD);
     }
 
     static <T, E> @NotNull Result<T, E> from(T value, @NotNull @NonNull E error) {
@@ -581,8 +609,8 @@ public sealed interface Result<T, E>
 
     default @NotNull ControlFlow<Result<Infallible, E>, T> branch() {
         return switch (this) {
-            case Result.Ok<T, E>(T result) -> new Continue<>(result);
-            case Result.Err<T, E>(E error) -> new Break<>(err(error));
+            case Ok<T, E>(T result) -> new Continue<>(result);
+            case Err<T, E>(E error) -> new Break<>(err(error));
         };
     }
 }
