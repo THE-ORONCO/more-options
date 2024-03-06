@@ -5,6 +5,11 @@ package the.oronco.tuple;
  * @since 06.03.24
  **/
 public sealed interface TupleError {
+    sealed interface IndexError extends TupleError {
+        record IndexTooLargeError(int requestedIndex, int maxIndex) implements IndexError {}
+
+        record IndexSmallerZeroError(int requestedIndex) implements IndexError {}
+    }
     sealed interface CreateError extends TupleError {
         record CannotSkipANegativeAmountOfElements(long negativeSkipValue) implements CreateError {
         }
