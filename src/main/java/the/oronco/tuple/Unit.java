@@ -27,8 +27,7 @@ public record Unit<T0>(T0 _0) implements Tuple<Unit<T0>, Unit<T0>, Unit<T0>>, Ru
         return new Unit<>(v0);
     }
 
-    public static <T> @NotNull Result<Unit<T>, TupleError> from(
-            @NonNull @NotNull final T[] vals) {
+    public static <T> @NotNull Result<Unit<T>, TupleError> from(@NonNull @NotNull final T[] vals) {
         if (vals.length > SIZE) {
             return Result.err(new TupleError.CreateError.TooFewElements(SIZE, vals.length, 0));
         } else if (vals.length < SIZE) {
@@ -37,18 +36,18 @@ public record Unit<T0>(T0 _0) implements Tuple<Unit<T0>, Unit<T0>, Unit<T0>>, Ru
         return Result.ok(Unit.of(vals[0]));
     }
 
-    public static <T> @NotNull Result<Unit<T>, TupleError> from(
-            @NonNull @NotNull final Iterable<T> iterable, long numberOfElementsToSkip) {
+    public static <T> @NotNull Result<Unit<T>, TupleError> from(@NonNull @NotNull final Iterable<T> iterable,
+                                                                long numberOfElementsToSkip) {
         return from(iterable, numberOfElementsToSkip, false);
     }
 
-    public static <T> @NotNull Result<Unit<T>, TupleError> from(
-            @NonNull @NotNull final Iterable<T> iterable) {
+    public static <T> @NotNull Result<Unit<T>, TupleError> from(@NonNull @NotNull final Iterable<T> iterable) {
         return from(iterable, 0, true);
     }
 
-    private static <T> @NotNull Result<Unit<T>, TupleError> from(
-            @NonNull @NotNull final Iterable<T> iterable, long numberOfElementsToSkip, boolean exactSize) {
+    private static <T> @NotNull Result<Unit<T>, TupleError> from(@NonNull @NotNull final Iterable<T> iterable,
+                                                                 long numberOfElementsToSkip,
+                                                                 boolean exactSize) {
 
         return Tuples.extractValues(iterable, numberOfElementsToSkip, exactSize, SIZE)
                      .map(vals -> Unit.of(vals[0]))
@@ -68,5 +67,21 @@ public record Unit<T0>(T0 _0) implements Tuple<Unit<T0>, Unit<T0>, Unit<T0>>, Ru
     @Override
     public @NotNull Unit<T0> rotR() {
         return new Unit<>(_0);
+    }
+
+    public <T1> @NotNull Pair<T0, T1> extend(T1 v1) {
+        return Pair.of(this._0, v1);
+    }
+
+    public <T1> @NotNull Pair<T0, T1> extend(Unit<T1> other) {
+        return this.extend(other._0);
+    }
+
+    public <T1, T2> @NotNull Triplet<T0, T1, T2> extend(T1 v1, T2 v2) {
+        return Triplet.of(this._0, v1, v2);
+    }
+
+    public <T1, T2> @NotNull Triplet<T0, T1, T2> extend(Pair<T1, T2> pair) {
+        return Triplet.of(this._0, pair._0(), pair._1());
     }
 }
