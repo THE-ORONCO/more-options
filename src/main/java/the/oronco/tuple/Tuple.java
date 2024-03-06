@@ -2,8 +2,10 @@ package the.oronco.tuple;
 
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.function.Function;
 import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 import the.oronco.Rusty;
 
@@ -12,7 +14,7 @@ import the.oronco.Rusty;
  * @since 06.03.24
  **/
 public sealed interface Tuple<T extends Tuple<T, L, R> & TupleL<L> & TupleR<R>, L extends TupleL<?>, R extends TupleR<?>>
-        extends TupleR<R>, TupleL<L>, Rusty<Collection<Object>>, Serializable
+        extends TupleR<R>, TupleL<L>, Rusty<Collection<Object>>, Serializable, Iterable<Object>
         permits Unit, Pair, Triplet, Quartet, Quintet, Sextet, Septet, Octet, Ennead, Decade {
 
     @SuppressWarnings("unchecked") // safe because T refers to the own type when the tuples are implemented correctly
@@ -25,4 +27,11 @@ public sealed interface Tuple<T extends Tuple<T, L, R> & TupleL<L> & TupleR<R>, 
     @Override
     @Contract(value = "-> new", pure = true)
     @Unmodifiable Collection<Object> j();
+
+    @NotNull
+    @Override
+    default Iterator<Object> iterator() {
+        return this.j()
+                   .iterator();
+    }
 }
