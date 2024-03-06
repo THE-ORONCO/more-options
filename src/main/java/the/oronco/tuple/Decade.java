@@ -18,10 +18,7 @@ import java.util.List;
 @With
 @Unmodifiable
 public record Decade<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(T0 _0, T1 _1, T2 _2, T3 _3, T4 _4, T5 _5, T6 _6, T7 _7, T8 _8, T9 _9)
-        implements Tuple<Decade<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>, Decade<T1, T2, T3, T4, T5, T6, T7, T8, T9, T0>, Decade<T9, T0, T1, T2, T3,
-        T4, T5, T6, T7, T8>>
-
-        ,
+        implements Tuple<Decade<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>, Decade<T1, T2, T3, T4, T5, T6, T7, T8, T9, T0>, Decade<T9, T0, T1, T2, T3, T4, T5, T6, T7, T8>>,
                    Indexed.Value0<T0>,
                    Indexed.Value1<T1>,
                    Indexed.Value2<T2>,

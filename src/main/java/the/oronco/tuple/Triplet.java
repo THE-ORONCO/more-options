@@ -15,9 +15,8 @@ import java.util.List;
  **/
 @With
 @Unmodifiable
-public record Triplet<T0, T1, T2>(T0 _0, T1 _1, T2 _2) implements Tuple<Triplet<T0, T1, T2>, Triplet<T1, T2, T0>, Triplet<T2, T0, T1>>
-
-        , Indexed.Value0<T0>, Indexed.Value1<T1>, Indexed.Value2<T2> {
+public record Triplet<T0, T1, T2>(T0 _0, T1 _1, T2 _2)
+        implements Tuple<Triplet<T0, T1, T2>, Triplet<T1, T2, T0>, Triplet<T2, T0, T1>>, Indexed.Value0<T0>, Indexed.Value1<T1>, Indexed.Value2<T2> {
     public static int SIZE = 3;
 
     @Override

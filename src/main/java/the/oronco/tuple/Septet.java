@@ -16,9 +16,14 @@ import java.util.List;
 @With
 @Unmodifiable
 public record Septet<T0, T1, T2, T3, T4, T5, T6>(T0 _0, T1 _1, T2 _2, T3 _3, T4 _4, T5 _5, T6 _6)
-        implements Tuple<Septet<T0, T1, T2, T3, T4, T5, T6>, Septet<T1, T2, T3, T4, T5, T6, T0>, Septet<T6, T0, T1, T2, T3, T4, T5>>
-
-        , Indexed.Value0<T0>, Indexed.Value1<T1>, Indexed.Value2<T2>, Indexed.Value3<T3>, Indexed.Value4<T4>, Indexed.Value5<T5>, Indexed.Value6<T6> {
+        implements Tuple<Septet<T0, T1, T2, T3, T4, T5, T6>, Septet<T1, T2, T3, T4, T5, T6, T0>, Septet<T6, T0, T1, T2, T3, T4, T5>>,
+                   Indexed.Value0<T0>,
+                   Indexed.Value1<T1>,
+                   Indexed.Value2<T2>,
+                   Indexed.Value3<T3>,
+                   Indexed.Value4<T4>,
+                   Indexed.Value5<T5>,
+                   Indexed.Value6<T6> {
     public static int SIZE = 7;
 
     @Override
