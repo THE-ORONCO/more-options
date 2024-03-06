@@ -1,14 +1,13 @@
 package the.oronco.tuple;
 
+import java.util.Collection;
+import java.util.List;
 import lombok.NonNull;
 import lombok.With;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 import the.oronco.Rusty;
 import the.oronco.adt.Result;
-
-import java.util.Collection;
-import java.util.List;
 
 /**
  * @author Théo Roncoletta
@@ -17,7 +16,7 @@ import java.util.List;
 @With
 @Unmodifiable
 public record Pair<T0, T1>(T0 _0, T1 _1)
-        implements Tuple<Pair<T0, T1>, Pair<T1, T0>, Pair<T1, T0>>, Rusty<Collection<Object>>, Indexed.Value0<T0>, Indexed.Value1<T1> {
+        implements Tuple<Pair<T0, T1>, Pair<T1, T0>, Pair<T1, T0>>, Rusty<Collection<Object>>, Indexed.Value1<T0, T1> {
     public static int SIZE = 2;
 
     @Override

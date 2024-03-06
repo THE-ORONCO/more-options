@@ -1,13 +1,12 @@
 package the.oronco.tuple;
 
+import java.util.Collection;
+import java.util.List;
 import lombok.NonNull;
 import lombok.With;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 import the.oronco.adt.Result;
-
-import java.util.Collection;
-import java.util.List;
 
 /**
  * @author Théo Roncoletta
@@ -17,12 +16,7 @@ import java.util.List;
 @Unmodifiable
 public record Sextet<T0, T1, T2, T3, T4, T5>(T0 _0, T1 _1, T2 _2, T3 _3, T4 _4, T5 _5)
         implements Tuple<Sextet<T0, T1, T2, T3, T4, T5>, Sextet<T1, T2, T3, T4, T5, T0>, Sextet<T5, T0, T1, T2, T3, T4>>,
-                   Indexed.Value0<T0>,
-                   Indexed.Value1<T1>,
-                   Indexed.Value2<T2>,
-                   Indexed.Value3<T3>,
-                   Indexed.Value4<T4>,
-                   Indexed.Value5<T5> {
+                   Indexed.Value5<T0, T1, T2, T3, T4, T5> {
     public static int SIZE = 6;
 
     @Override
@@ -63,7 +57,7 @@ public record Sextet<T0, T1, T2, T3, T4, T5>(T0 _0, T1 _1, T2 _2, T3 _3, T4 _4, 
     }
 
     @Override
-    public Collection<Object> j() {
+    public @NotNull Collection<Object> j() {
         return List.of(_0, _1, _2, _3, _4, _5);
     }
 

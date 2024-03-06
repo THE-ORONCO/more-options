@@ -1,14 +1,13 @@
 package the.oronco.tuple;
 
+import java.util.Collection;
+import java.util.List;
 import lombok.NonNull;
 import lombok.With;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 import the.oronco.Rusty;
 import the.oronco.adt.Result;
-
-import java.util.Collection;
-import java.util.List;
 
 /**
  * @author Théo Roncoletta
@@ -57,7 +56,7 @@ public record Unit<T0>(T0 _0) implements Tuple<Unit<T0>, Unit<T0>, Unit<T0>>, Ru
     }
 
     @Override
-    public Collection<Object> j() {
+    public @NotNull Collection<Object> j() {
         return List.of(_0);
     }
 

@@ -1,13 +1,12 @@
 package the.oronco.tuple;
 
+import java.util.Collection;
+import java.util.List;
 import lombok.NonNull;
 import lombok.With;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 import the.oronco.adt.Result;
-
-import java.util.Collection;
-import java.util.List;
 
 /**
  * @author Théo Roncoletta
@@ -16,7 +15,7 @@ import java.util.List;
 @With
 @Unmodifiable
 public record Triplet<T0, T1, T2>(T0 _0, T1 _1, T2 _2)
-        implements Tuple<Triplet<T0, T1, T2>, Triplet<T1, T2, T0>, Triplet<T2, T0, T1>>, Indexed.Value0<T0>, Indexed.Value1<T1>, Indexed.Value2<T2> {
+        implements Tuple<Triplet<T0, T1, T2>, Triplet<T1, T2, T0>, Triplet<T2, T0, T1>>, Indexed.Value2<T0, T1, T2> {
     public static int SIZE = 3;
 
     @Override
@@ -57,7 +56,7 @@ public record Triplet<T0, T1, T2>(T0 _0, T1 _1, T2 _2)
     }
 
     @Override
-    public Collection<Object> j() {
+    public @NotNull Collection<Object> j() {
         return List.of(_0, _1, _2);
     }
 

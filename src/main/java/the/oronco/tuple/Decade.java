@@ -1,5 +1,7 @@
 package the.oronco.tuple;
 
+import java.util.Collection;
+import java.util.List;
 import lombok.NonNull;
 import lombok.With;
 import org.jetbrains.annotations.NotNull;
@@ -7,9 +9,6 @@ import org.jetbrains.annotations.Unmodifiable;
 import the.oronco.adt.Result;
 import the.oronco.tuple.TupleError.CreateError.TooFewElements;
 import the.oronco.tuple.TupleError.CreateError.TooManyElements;
-
-import java.util.Collection;
-import java.util.List;
 
 /**
  * @author Théo Roncoletta
@@ -19,16 +18,7 @@ import java.util.List;
 @Unmodifiable
 public record Decade<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(T0 _0, T1 _1, T2 _2, T3 _3, T4 _4, T5 _5, T6 _6, T7 _7, T8 _8, T9 _9)
         implements Tuple<Decade<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>, Decade<T1, T2, T3, T4, T5, T6, T7, T8, T9, T0>, Decade<T9, T0, T1, T2, T3, T4, T5, T6, T7, T8>>,
-                   Indexed.Value0<T0>,
-                   Indexed.Value1<T1>,
-                   Indexed.Value2<T2>,
-                   Indexed.Value3<T3>,
-                   Indexed.Value4<T4>,
-                   Indexed.Value5<T5>,
-                   Indexed.Value6<T6>,
-                   Indexed.Value7<T7>,
-                   Indexed.Value8<T8>,
-                   Indexed.Value9<T9> {
+                   Indexed.Value9<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> {
 
     public static int SIZE = 10;
 
@@ -71,7 +61,7 @@ public record Decade<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(T0 _0, T1 _1, T2 _2
     }
 
     @Override
-    public Collection<Object> j() {
+    public @NotNull Collection<Object> j() {
         return List.of(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9);
     }
 

@@ -1,11 +1,10 @@
 package the.oronco.tuple;
 
+import java.util.Collection;
+import java.util.function.Function;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Unmodifiable;
 import the.oronco.Rusty;
-
-import java.util.Collection;
-import java.util.function.Function;
 
 /**
  * @author Théo Roncoletta
@@ -20,8 +19,6 @@ public sealed interface Tuple<T extends Tuple<T, L, R> & TupleL<L> & TupleR<R>, 
     }
 
     int size();
-
-    // TODO create generic method for rotation with int parameter for number of shifts instead of splitting left and right rotation
 
     @Override
     @Contract(value = "-> new", pure = true)
