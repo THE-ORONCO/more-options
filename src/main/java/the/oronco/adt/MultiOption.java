@@ -485,9 +485,9 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
     static <T> @NotNull MultiOption<T> fromMultiOptions(@NotNull @NonNull Collection<@NotNull MultiOption<@NotNull T>> multipleMultiOptions) {
         return MultiOption.from(multipleMultiOptions.stream()
                                                     .flatMap(multiOption -> switch (multiOption) {
-                                                        case MultiOption.None<T> ignored -> Stream.of();
-                                                        case MultiOption.One<T>(T value) -> Stream.of(value);
-                                                        case MultiOption.Many<T>(var values) -> values.stream();
+                                                        case None<T> ignored -> Stream.of();
+                                                        case One<T>(T value) -> Stream.of(value);
+                                                        case Many<T>(var values) -> values.stream();
                                                     })
                                                     .collect(Collectors.toSet()));
     }

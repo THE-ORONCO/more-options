@@ -1,5 +1,15 @@
 package the.oronco.adt;
 
+import java.io.Serializable;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
@@ -13,17 +23,6 @@ import the.oronco.adt.ControlFlow.Break;
 import the.oronco.adt.ControlFlow.Continue;
 import the.oronco.adt.exceptions.WrongKindOfExceptionError;
 import the.oronco.adt.funcs.ThrowingFunction;
-
-import java.io.Serializable;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
 
 // TODO examples like in the rust documentation
 // TODO replace exceptions with better exceptions
@@ -564,7 +563,7 @@ public sealed interface Result<T, E>
     default @NotNull Optional<T> j() {
         return switch (this) {
             case Ok<T, E>(T result) -> Optional.of(result);
-            case Result.Err<T, E> ignored -> Optional.empty();
+            case Err<T, E> ignored -> Optional.empty();
         };
     }
 

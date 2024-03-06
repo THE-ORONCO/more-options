@@ -1,5 +1,11 @@
 package the.oronco.adt;
 
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -8,13 +14,6 @@ import lombok.ToString;
 import org.jetbrains.annotations.NotNull;
 import the.oronco.Rusty;
 import the.oronco.adt.exceptions.ValueNotValidForBoundError;
-
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
 
 /**
  * Condition describes a Monad that always asserts a certain condition over the contained value.
@@ -45,15 +44,15 @@ public sealed interface Condition<T> extends Rusty<Optional<T>> {
 
     default boolean doesHold() {
         return switch (this) {
-            case Condition.Holds<T> ignored -> true;
-            case Condition.HoldsNot<T> ignored -> false;
+            case Holds<T> ignored -> true;
+            case HoldsNot<T> ignored -> false;
         };
     }
 
     default boolean doesNotHold() {
         return switch (this) {
-            case Condition.Holds<T> ignored -> false;
-            case Condition.HoldsNot<T> ignored -> true;
+            case Holds<T> ignored -> false;
+            case HoldsNot<T> ignored -> true;
         };
     }
 
@@ -65,8 +64,8 @@ public sealed interface Condition<T> extends Rusty<Optional<T>> {
      */
     default boolean isHoldsAnd(@NotNull @NonNull Predicate<? super @NotNull T> predicate) {
         return switch (this) {
-            case Condition.Holds<T>(T value, var ignored) -> predicate.test(value);
-            case Condition.HoldsNot<T> ignored -> false;
+            case Holds<T>(T value, var ignored) -> predicate.test(value);
+            case HoldsNot<T> ignored -> false;
         };
     }
 
@@ -77,8 +76,8 @@ public sealed interface Condition<T> extends Rusty<Optional<T>> {
      */
     default @NotNull Stream<T> stream() {
         return switch (this) {
-            case Condition.Holds<T>(T value, var ignored) -> Stream.of(value);
-            case Condition.HoldsNot<T> ignored -> Stream.of();
+            case Holds<T>(T value, var ignored) -> Stream.of(value);
+            case HoldsNot<T> ignored -> Stream.of();
         };
     }
 
@@ -89,8 +88,8 @@ public sealed interface Condition<T> extends Rusty<Optional<T>> {
      */
     default @NotNull T expect(String errorMessage) throws @NotNull NoSuchElementException {
         return switch (this) {
-            case Condition.Holds<T>(T value, var ignored) -> value;
-            case Condition.HoldsNot<T> ignored -> throw new NoSuchElementException(errorMessage);
+            case Holds<T>(T value, var ignored) -> value;
+            case HoldsNot<T> ignored -> throw new NoSuchElementException(errorMessage);
         };
     }
 
@@ -101,8 +100,8 @@ public sealed interface Condition<T> extends Rusty<Optional<T>> {
      */
     default @NotNull <E extends Exception> T expect(@NonNull E errorMessage) throws @NotNull E {
         return switch (this) {
-            case Condition.Holds<T>(T value, var ignored) -> value;
-            case Condition.HoldsNot<T> ignored -> throw errorMessage;
+            case Holds<T>(T value, var ignored) -> value;
+            case HoldsNot<T> ignored -> throw errorMessage;
         };
     }
 
@@ -113,8 +112,8 @@ public sealed interface Condition<T> extends Rusty<Optional<T>> {
      */
     default @NotNull <E extends Exception> T expectElse(@NotNull @NonNull Supplier<@NotNull E> exceptionSupplier) throws @NotNull E {
         return switch (this) {
-            case Condition.Holds<T>(T value, var ignored) -> value;
-            case Condition.HoldsNot<T> ignored -> throw exceptionSupplier.get();
+            case Holds<T>(T value, var ignored) -> value;
+            case HoldsNot<T> ignored -> throw exceptionSupplier.get();
         };
     }
 
@@ -130,8 +129,8 @@ public sealed interface Condition<T> extends Rusty<Optional<T>> {
      */
     default @NotNull T unwrap() throws @NotNull NoSuchElementException {
         return switch (this) {
-            case Condition.Holds<T>(T value, var ignored) -> value;
-            case Condition.HoldsNot<T> ignored -> throw new NoSuchElementException("Condition was unwrapped but it had no value!");
+            case Holds<T>(T value, var ignored) -> value;
+            case HoldsNot<T> ignored -> throw new NoSuchElementException("Condition was unwrapped but it had no value!");
         };
     }
 
@@ -145,8 +144,8 @@ public sealed interface Condition<T> extends Rusty<Optional<T>> {
      */
     default T unwrapOr(T defaultValue) {
         return switch (this) {
-            case Condition.Holds<T>(T value, var ignored) -> value;
-            case Condition.HoldsNot<T> ignored -> defaultValue;
+            case Holds<T>(T value, var ignored) -> value;
+            case HoldsNot<T> ignored -> defaultValue;
         };
     }
 
@@ -158,8 +157,8 @@ public sealed interface Condition<T> extends Rusty<Optional<T>> {
      */
     default T unwrapOrElse(@NotNull @NonNull Supplier<? extends @NotNull T> supplier) {
         return switch (this) {
-            case Condition.Holds<T>(T value, var ignored) -> value;
-            case Condition.HoldsNot<T> ignored -> supplier.get();
+            case Holds<T>(T value, var ignored) -> value;
+            case HoldsNot<T> ignored -> supplier.get();
         };
     }
 
@@ -172,16 +171,9 @@ public sealed interface Condition<T> extends Rusty<Optional<T>> {
      */
     default @NotNull Condition<T> map(@NotNull @NonNull Function<? super @NotNull T, ? extends @NotNull T> f) {
         return switch (this) {
-            case Condition.Holds<T>(T value, var bound) -> from(f.apply(value), bound);
-            case Condition.HoldsNot<T> ignored -> holdsNot();
+            case Holds<T>(T value, var bound) -> from(f.apply(value), bound);
+            case HoldsNot<T> ignored -> holdsNot();
         };
-    }
-
-    public static void main(String[] args) {
-        Condition<CharSequence> c = Condition.<CharSequence>from("a", a -> !a.isEmpty())
-                                             .map(StringBuilder::new)
-                                             .filter(CharSequence::isEmpty);
-        System.out.println(c);
     }
 
     /**
@@ -196,8 +188,8 @@ public sealed interface Condition<T> extends Rusty<Optional<T>> {
     default @NotNull <R> Condition<R> map(
             @NotNull @NonNull Function<? super @NotNull T, ? extends @NotNull R> f, @NotNull @NonNull Predicate<? super @NotNull R> newBound) {
         return switch (this) {
-            case Condition.Holds<T>(T value, var ignored) -> from(f.apply(value), newBound);
-            case Condition.HoldsNot<T> ignored -> holdsNot();
+            case Holds<T>(T value, var ignored) -> from(f.apply(value), newBound);
+            case HoldsNot<T> ignored -> holdsNot();
         };
     }
 
@@ -211,8 +203,8 @@ public sealed interface Condition<T> extends Rusty<Optional<T>> {
     default @NotNull Condition<T> reBound(
             @NotNull @NonNull Predicate<? super @NotNull T> bound) {
         return switch (this) {
-            case Condition.Holds<T>(T value, var ignored) -> from(value, bound);
-            case Condition.HoldsNot<T> ignored -> holdsNot();
+            case Holds<T>(T value, var ignored) -> from(value, bound);
+            case HoldsNot<T> ignored -> holdsNot();
         };
     }
 
@@ -233,7 +225,7 @@ public sealed interface Condition<T> extends Rusty<Optional<T>> {
      * @return an option that is either {@code Some<T>} and conforms to the {@code Predicate<? super T>} or {@code None<T>}
      */
     default @NotNull Condition<T> filter(@NotNull @NonNull Predicate<? super @NotNull T> predicate) {
-        if (this instanceof Condition.Holds<T>(T value, var bound)) {
+        if (this instanceof Holds<T>(T value, var bound)) {
             if (predicate.test(value)) {
                 return holds(value, bound);
             }
@@ -258,8 +250,8 @@ public sealed interface Condition<T> extends Rusty<Optional<T>> {
      */
     default @NotNull Optional<T> toOptional() {
         return switch (this) {
-            case Condition.Holds<T>(T value, var ignored) -> Optional.of(value);
-            case Condition.HoldsNot<T> ignored -> Optional.empty();
+            case Holds<T>(T value, var ignored) -> Optional.of(value);
+            case HoldsNot<T> ignored -> Optional.empty();
         };
     }
 
