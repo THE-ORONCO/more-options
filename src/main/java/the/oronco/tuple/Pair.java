@@ -1,13 +1,14 @@
 package the.oronco.tuple;
 
-import java.util.Collection;
-import java.util.List;
 import lombok.NonNull;
 import lombok.With;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 import the.oronco.Rusty;
 import the.oronco.adt.Result;
+
+import java.util.Collection;
+import java.util.List;
 
 /**
  * @author Théo Roncoletta
@@ -16,16 +17,13 @@ import the.oronco.adt.Result;
 @With
 @Unmodifiable
 public record Pair<T0, T1>(T0 _0, T1 _1)
-        implements Tuple<Pair<T0, T1>, Pair<T1, T0>, Pair<T1, T0>>, Rusty<Collection<Object>>, Indexed.Value1<T0, T1> {
-    public static int SIZE = 2;
-
-    @Override
-    public int size() {
-        return SIZE;
-    }
-
+        implements MultiValue<Pair<T0, T1>, Pair<T1, T0>, Pair<T1, T0>>, Rusty<Collection<Object>>, Tuple.Size2<T0, T1> {
     public static <T0, T1> @NotNull Pair<T0, T1> of(T0 v0, T1 v1) {
         return new Pair<>(v0, v1);
+    }
+
+    public static <T0, T1> @NotNull Pair<T0, T1> of(@NotNull @NonNull Tuple.Size2<T0, T1> other) {
+        return Pair.of(other._0(), other._1());
     }
 
     public static <T> @NotNull Result<Pair<T, T>, TupleError> from(

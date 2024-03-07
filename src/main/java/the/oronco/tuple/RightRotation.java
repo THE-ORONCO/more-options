@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
  * @author Théo Roncoletta
  * @since 06.03.24
  **/
-public interface TupleR<R extends TupleR<?>> {
+public interface RightRotation<R extends RightRotation<?>> {
     // TODO create method that accepts int for number of rotations (i.e. rotR(int n))
     @Contract(value = "-> new")
     @NotNull R rotR();

@@ -1,12 +1,13 @@
 package the.oronco.tuple;
 
-import java.util.Collection;
-import java.util.List;
 import lombok.NonNull;
 import lombok.With;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 import the.oronco.adt.Result;
+
+import java.util.Collection;
+import java.util.List;
 
 /**
  * @author Théo Roncoletta
@@ -15,17 +16,16 @@ import the.oronco.adt.Result;
 @With
 @Unmodifiable
 public record Septet<T0, T1, T2, T3, T4, T5, T6>(T0 _0, T1 _1, T2 _2, T3 _3, T4 _4, T5 _5, T6 _6)
-        implements Tuple<Septet<T0, T1, T2, T3, T4, T5, T6>, Septet<T1, T2, T3, T4, T5, T6, T0>, Septet<T6, T0, T1, T2, T3, T4, T5>>,
-                   Indexed.Value6<T0, T1, T2, T3, T4, T5, T6> {
-    public static int SIZE = 7;
-
-    @Override
-    public int size() {
-        return SIZE;
-    }
+        implements MultiValue<Septet<T0, T1, T2, T3, T4, T5, T6>, Septet<T1, T2, T3, T4, T5, T6, T0>, Septet<T6, T0, T1, T2, T3, T4, T5>>,
+                   Tuple.Size7<T0, T1, T2, T3, T4, T5, T6> {
 
     public static <T0, T1, T2, T3, T4, T5, T6> @NotNull Septet<T0, T1, T2, T3, T4, T5, T6> of(T0 v0, T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6) {
         return new Septet<>(v0, v1, v2, v3, v4, v5, v6);
+    }
+
+    public static <T0, T1, T2, T3, T4, T5, T6> @NotNull Septet<T0, T1, T2, T3, T4, T5, T6> of(
+            @NotNull @NonNull Tuple.Size7<T0, T1, T2, T3, T4, T5, T6> other) {
+        return Septet.of(other._0(), other._1(), other._2(), other._3(), other._4(), other._5(), other._6());
     }
 
     public static <T> @NotNull Result<Septet<T, T, T, T, T, T, T>, TupleError> from(

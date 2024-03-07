@@ -1,12 +1,13 @@
 package the.oronco.tuple;
 
-import java.util.Collection;
-import java.util.List;
 import lombok.NonNull;
 import lombok.With;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 import the.oronco.adt.Result;
+
+import java.util.Collection;
+import java.util.List;
 
 /**
  * @author Théo Roncoletta
@@ -15,17 +16,15 @@ import the.oronco.adt.Result;
 @With
 @Unmodifiable
 public record Sextet<T0, T1, T2, T3, T4, T5>(T0 _0, T1 _1, T2 _2, T3 _3, T4 _4, T5 _5)
-        implements Tuple<Sextet<T0, T1, T2, T3, T4, T5>, Sextet<T1, T2, T3, T4, T5, T0>, Sextet<T5, T0, T1, T2, T3, T4>>,
-                   Indexed.Value5<T0, T1, T2, T3, T4, T5> {
-    public static int SIZE = 6;
-
-    @Override
-    public int size() {
-        return SIZE;
-    }
+        implements MultiValue<Sextet<T0, T1, T2, T3, T4, T5>, Sextet<T1, T2, T3, T4, T5, T0>, Sextet<T5, T0, T1, T2, T3, T4>>, Tuple.Size6<T0, T1,
+        T2, T3, T4, T5> {
 
     public static <T0, T1, T2, T3, T4, T5> @NotNull Sextet<T0, T1, T2, T3, T4, T5> of(T0 v0, T1 v1, T2 v2, T3 v3, T4 v4, T5 v5) {
         return new Sextet<>(v0, v1, v2, v3, v4, v5);
+    }
+
+    public static <T0, T1, T2, T3, T4, T5> @NotNull Sextet<T0, T1, T2, T3, T4, T5> of(@NotNull @NonNull Tuple.Size6<T0, T1, T2, T3, T4, T5> other) {
+        return Sextet.of(other._0(), other._1(), other._2(), other._3(), other._4(), other._5());
     }
 
     public static <T> @NotNull Result<Sextet<T, T, T, T, T, T>, TupleError> from(

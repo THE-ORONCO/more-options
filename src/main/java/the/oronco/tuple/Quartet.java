@@ -1,12 +1,13 @@
 package the.oronco.tuple;
 
-import java.util.Collection;
-import java.util.List;
 import lombok.NonNull;
 import lombok.With;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 import the.oronco.adt.Result;
+
+import java.util.Collection;
+import java.util.List;
 
 /**
  * @author Théo Roncoletta
@@ -15,17 +16,14 @@ import the.oronco.adt.Result;
 @With
 @Unmodifiable
 public record Quartet<T0, T1, T2, T3>(T0 _0, T1 _1, T2 _2, T3 _3)
-        implements Tuple<Quartet<T0, T1, T2, T3>, Quartet<T1, T2, T3, T0>, Quartet<T3, T0, T1, T2>>,
-                   Indexed.Value3<T0, T1, T2, T3> {
-    public static int SIZE = 4;
-
-    @Override
-    public int size() {
-        return SIZE;
-    }
+        implements MultiValue<Quartet<T0, T1, T2, T3>, Quartet<T1, T2, T3, T0>, Quartet<T3, T0, T1, T2>>, Tuple.Size4<T0, T1, T2, T3> {
 
     public static <T0, T1, T2, T3> @NotNull Quartet<T0, T1, T2, T3> of(T0 v0, T1 v1, T2 v2, T3 v3) {
         return new Quartet<>(v0, v1, v2, v3);
+    }
+
+    public static <T0, T1, T2, T3> @NotNull Quartet<T0, T1, T2, T3> of(@NotNull @NonNull Tuple.Size4<T0, T1, T2, T3> other) {
+        return Quartet.of(other._0(), other._1(), other._2(), other._3());
     }
 
     public static <T> @NotNull Result<Quartet<T, T, T, T>, TupleError> from(

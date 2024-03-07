@@ -1,12 +1,13 @@
 package the.oronco.tuple;
 
-import java.util.Collection;
-import java.util.List;
 import lombok.NonNull;
 import lombok.With;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 import the.oronco.adt.Result;
+
+import java.util.Collection;
+import java.util.List;
 
 /**
  * @author Théo Roncoletta
@@ -15,16 +16,13 @@ import the.oronco.adt.Result;
 @With
 @Unmodifiable
 public record Triplet<T0, T1, T2>(T0 _0, T1 _1, T2 _2)
-        implements Tuple<Triplet<T0, T1, T2>, Triplet<T1, T2, T0>, Triplet<T2, T0, T1>>, Indexed.Value2<T0, T1, T2> {
-    public static int SIZE = 3;
-
-    @Override
-    public int size() {
-        return SIZE;
-    }
-
+        implements MultiValue<Triplet<T0, T1, T2>, Triplet<T1, T2, T0>, Triplet<T2, T0, T1>>, Tuple.Size3<T0, T1, T2> {
     public static <T0, T1, T2> @NotNull Triplet<T0, T1, T2> of(T0 v0, T1 v1, T2 v2) {
         return new Triplet<>(v0, v1, v2);
+    }
+
+    public static <T0, T1, T2> @NotNull Triplet<T0, T1, T2> of(@NotNull @NonNull Tuple.Size3<T0, T1, T2> other) {
+        return Triplet.of(other._0(), other._1(), other._2());
     }
 
     public static <T> @NotNull Result<Triplet<T, T, T>, TupleError> from(

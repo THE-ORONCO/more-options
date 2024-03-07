@@ -1,7 +1,5 @@
 package the.oronco.tuple;
 
-import java.util.Collection;
-import java.util.List;
 import lombok.NonNull;
 import lombok.With;
 import org.jetbrains.annotations.NotNull;
@@ -10,6 +8,9 @@ import the.oronco.adt.Result;
 import the.oronco.tuple.TupleError.CreateError.TooFewElements;
 import the.oronco.tuple.TupleError.CreateError.TooManyElements;
 
+import java.util.Collection;
+import java.util.List;
+
 /**
  * @author Théo Roncoletta
  * @since 06.03.24
@@ -17,18 +18,17 @@ import the.oronco.tuple.TupleError.CreateError.TooManyElements;
 @With
 @Unmodifiable
 public record Ennead<T0, T1, T2, T3, T4, T5, T6, T7, T8>(T0 _0, T1 _1, T2 _2, T3 _3, T4 _4, T5 _5, T6 _6, T7 _7, T8 _8)
-        implements Tuple<Ennead<T0, T1, T2, T3, T4, T5, T6, T7, T8>, Ennead<T1, T2, T3, T4, T5, T6, T7, T8, T0>, Ennead<T8, T0, T1, T2, T3, T4, T5, T6, T7>>,
-                   Indexed.Value8<T0, T1, T2, T3, T4, T5, T6, T7, T8> {
-    public static int SIZE = 9;
-
-    @Override
-    public int size() {
-        return SIZE;
-    }
+        implements MultiValue<Ennead<T0, T1, T2, T3, T4, T5, T6, T7, T8>, Ennead<T1, T2, T3, T4, T5, T6, T7, T8, T0>, Ennead<T8, T0, T1, T2, T3, T4
+        , T5, T6, T7>>, Tuple.Size9<T0, T1, T2, T3, T4, T5, T6, T7, T8> {
 
     public static <T0, T1, T2, T3, T4, T5, T6, T7, T8> @NotNull Ennead<T0, T1, T2, T3, T4, T5, T6, T7, T8> of(
             T0 v0, T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6, T7 v7, T8 v8) {
         return new Ennead<>(v0, v1, v2, v3, v4, v5, v6, v7, v8);
+    }
+
+    public static <T0, T1, T2, T3, T4, T5, T6, T7, T8> @NotNull Ennead<T0, T1, T2, T3, T4, T5, T6, T7, T8> of(
+            Tuple.Size9<T0, T1, T2, T3, T4, T5, T6, T7, T8> other) {
+        return Ennead.of(other._0(), other._1(), other._2(), other._3(), other._4(), other._5(), other._6(), other._7(), other._8());
     }
 
     public static <T> @NotNull Result<Ennead<T, T, T, T, T, T, T, T, T>, TupleError> from(

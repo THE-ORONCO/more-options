@@ -1,12 +1,13 @@
 package the.oronco.tuple;
 
-import java.util.Collection;
-import java.util.List;
 import lombok.NonNull;
 import lombok.With;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 import the.oronco.adt.Result;
+
+import java.util.Collection;
+import java.util.List;
 
 /**
  * @author Théo Roncoletta
@@ -15,18 +16,17 @@ import the.oronco.adt.Result;
 @With
 @Unmodifiable
 public record Octet<T0, T1, T2, T3, T4, T5, T6, T7>(T0 _0, T1 _1, T2 _2, T3 _3, T4 _4, T5 _5, T6 _6, T7 _7)
-        implements Tuple<Octet<T0, T1, T2, T3, T4, T5, T6, T7>, Octet<T1, T2, T3, T4, T5, T6, T7, T0>, Octet<T7, T0, T1, T2, T3, T4, T5, T6>>,
-                   Indexed.Value7<T0, T1, T2, T3, T4, T5, T6, T7> {
-    public static int SIZE = 8;
-
-    @Override
-    public int size() {
-        return SIZE;
-    }
+        implements MultiValue<Octet<T0, T1, T2, T3, T4, T5, T6, T7>, Octet<T1, T2, T3, T4, T5, T6, T7, T0>, Octet<T7, T0, T1, T2, T3, T4, T5, T6>>,
+                   Tuple.Size8<T0, T1, T2, T3, T4, T5, T6, T7> {
 
     public static <T0, T1, T2, T3, T4, T5, T6, T7> @NotNull Octet<T0, T1, T2, T3, T4, T5, T6, T7> of(
             T0 v0, T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6, T7 v7) {
         return new Octet<>(v0, v1, v2, v3, v4, v5, v6, v7);
+    }
+
+    public static <T0, T1, T2, T3, T4, T5, T6, T7> @NotNull Octet<T0, T1, T2, T3, T4, T5, T6, T7> of(
+            @NotNull @NonNull Tuple.Size8<T0, T1, T2, T3, T4, T5, T6, T7> other) {
+        return Octet.of(other._0(), other._1(), other._2(), other._3(), other._4(), other._5(), other._6(), other._7());
     }
 
     public static <T> @NotNull Result<Octet<T, T, T, T, T, T, T, T>, TupleError> from(

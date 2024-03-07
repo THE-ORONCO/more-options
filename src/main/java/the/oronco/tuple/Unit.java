@@ -1,13 +1,13 @@
 package the.oronco.tuple;
 
-import java.util.Collection;
-import java.util.List;
 import lombok.NonNull;
 import lombok.With;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
-import the.oronco.Rusty;
 import the.oronco.adt.Result;
+
+import java.util.Collection;
+import java.util.List;
 
 /**
  * @author Théo Roncoletta
@@ -15,17 +15,15 @@ import the.oronco.adt.Result;
  **/
 @With
 @Unmodifiable
-public record Unit<T0>(T0 _0) implements Tuple<Unit<T0>, Unit<T0>, Unit<T0>>, Rusty<Collection<Object>>, Indexed.Value0<T0> {
-    public static int SIZE = 1;
-
-    @Override
-    public int size() {
-        return SIZE;
-    }
-
+public record Unit<T0>(T0 _0) implements MultiValue<Unit<T0>, Unit<T0>, Unit<T0>>, Tuple.Size1<T0> {
     public static <T0> @NotNull Unit<T0> of(T0 v0) {
         return new Unit<>(v0);
     }
+
+    public static <T0> @NotNull Unit<T0> of(@NotNull @NonNull Tuple.Size1<T0> other) {
+        return Unit.of(other._0());
+    }
+
 
     public static <T> @NotNull Result<Unit<T>, TupleError> from(@NonNull @NotNull final T[] vals) {
         if (vals.length > SIZE) {
@@ -84,4 +82,5 @@ public record Unit<T0>(T0 _0) implements Tuple<Unit<T0>, Unit<T0>, Unit<T0>>, Ru
     public <T1, T2> @NotNull Triplet<T0, T1, T2> extend(Pair<T1, T2> pair) {
         return Triplet.of(this._0, pair._0(), pair._1());
     }
+
 }
