@@ -1,15 +1,5 @@
 package the.oronco.adt;
 
-import java.io.Serializable;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
@@ -23,6 +13,17 @@ import the.oronco.adt.ControlFlow.Break;
 import the.oronco.adt.ControlFlow.Continue;
 import the.oronco.adt.exceptions.WrongKindOfExceptionError;
 import the.oronco.adt.funcs.ThrowingFunction;
+
+import java.io.Serializable;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 // TODO examples like in the rust documentation
 // TODO replace exceptions with better exceptions
@@ -156,15 +157,13 @@ public sealed interface Result<T, E>
      * @param ef  function that can convert {@code X} to {@code E} to create an error in the throwing case
      * @return a new result with a converted value
      */
-    default <U, X extends Exception> @NotNull Result<U, E> safeMap(
+    default <U, X extends Exception> @NotNull Result<? extends U, ? extends E> safeMap(
             @NotNull @NonNull ThrowingFunction<? super @NotNull T, ? extends @NotNull U, ? extends @NotNull X> f,
             @NotNull @NonNull Function<? super @NotNull X, ? extends @NotNull E> ef) throws WrongKindOfExceptionError {
         return switch (this) {
-            case Ok<T, E> ok -> switch (f.apply(ok.result)){
-                case Ok<? extends U, ? extends X>(U result) -> Result.ok(result);
-                case Err<? extends U, ? extends X>(X exception) -> Result.err(ef.apply(exception));
-            };
-            case Err<T, E>(E error) -> err(error);
+            case Result.Ok<T, E>(T result) -> f.andThen(r -> r.mapErr(ef))
+                                               .apply(result);
+            case Result.Err<T, E>(E error) -> Result.err(error);
         };
     }
 
@@ -513,9 +512,10 @@ public sealed interface Result<T, E>
      *
      * @return the other successful result or the error of {@code this}
      */
-    default <U> @NotNull Result<? extends U, ? extends E> andThen(@NotNull @NonNull Supplier<@NotNull Result<? extends U, ? extends E>> f) {
+    default <U> @NotNull Result<? extends U, ? extends E> andThen(@NotNull @NonNull Function<? super @NotNull T, @NotNull Result<? extends U, ?
+            extends E>> f) {
         return switch (this) {
-            case Ok<T, E> ignored -> f.get();
+            case Ok<T, E>(T result) -> f.apply(result);
             case Err<T, E>(E error) -> err(error);
         };
     }
@@ -525,7 +525,7 @@ public sealed interface Result<T, E>
      * {@code Ok<T, F>} value of {@code this}.
      * <p>
      * Arguments passed to {@code or()} are eagerly evaluated; if you are passing the result of a
-     * function call, it is recommended to use {@link the.oronco.adt.Result#orThen(java.util.function.Supplier)}, which is lazily
+     * function call, it is recommended to use {@link the.oronco.adt.Result#orThen(java.util.function.Function)}, which is lazily
      * evaluated.
      *
      * @param other the fallback result in case {@code this} is an {@code Err<T, E>}
@@ -552,10 +552,10 @@ public sealed interface Result<T, E>
      *
      * @return {@code this} if it is successful {@code other} otherwise
      */
-    default <F> @NotNull Result<? extends T, ? extends F> orThen(@NotNull @NonNull Supplier<Result<? extends T, ? extends F>> f) {
+    default <F> @NotNull Result<? extends T, ? extends F> orThen(@NotNull @NonNull Function<? super @NotNull E, Result<? extends T, ? extends F>> f) {
         return switch (this) {
             case Ok<T, E>(T result) -> ok(result);
-            case Err<T, E> ignored -> f.get();
+            case Err<T, E>(E error) -> f.apply(error);
         };
     }
 

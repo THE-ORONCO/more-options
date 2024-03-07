@@ -1,16 +1,6 @@
 package the.oronco.adt;
 
 
-import java.io.Serializable;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -26,6 +16,17 @@ import the.oronco.Rusty;
 import the.oronco.adt.exceptions.GivenValueWasNullError;
 import the.oronco.adt.exceptions.WrongKindOfExceptionError;
 import the.oronco.adt.funcs.ThrowingFunction;
+
+import java.io.Serializable;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 // TODO examples like in the rust documentation
 // TODO replace exceptions with better exceptions
@@ -232,13 +233,12 @@ public sealed interface Option<T>
      * @param <R> type that the value of a {@code Some<T>} should be converted to
      * @return a new {@code Option<R>} with the converted value
      */
-    default <R, X extends Exception> @NotNull Option<R> safeMap(@NotNull @NonNull ThrowingFunction<? super @NotNull T, ? extends @NotNull R, ? extends @NotNull X> f) throws
-                                                                                                                                                                      WrongKindOfExceptionError {
+    default <R, X extends Exception> @NotNull Option<? extends R> safeMap(@NotNull @NonNull ThrowingFunction<? super @NotNull T, ?
+            extends @NotNull R, ? extends @NotNull X> f)
+            throws WrongKindOfExceptionError {
         return switch (this) {
-            case Some<T>(T value) -> switch (f.apply(value)) {
-                case Result.Ok<? extends R, ? extends X>(R result) -> some(result);
-                case Result.Err<? extends R, ? extends X>(X ignored) -> none();
-            };
+            case Some<T>(T value) -> f.apply(value)
+                                      .ok();
             case None<T> ignored -> none();
         };
     }
@@ -408,15 +408,15 @@ public sealed interface Option<T>
      * <p>
      * Some languages call this operation flatmap.
      *
-     * @param other another optional that should be returned when this is {@code Some<T>}
+     * @param f another optional that should be returned when this is {@code Some<T>}
      * @param <U>   type of the other optional
      *
      * @return either the result of {@code other(some.value)} or {@code None} when this is
      * {@code None}
      */
-    default <U> @NotNull Option<? extends U> andThen(@NotNull @NonNull Function<? super @NotNull T, Option<? extends @NotNull U>> other) {
+    default <U> @NotNull Option<? extends U> andThen(@NotNull @NonNull Function<? super @NotNull T, Option<? extends @NotNull U>> f) {
         return switch (this) {
-            case Some<T>(T value) -> other.apply(value);
+            case Some<T>(T value) -> f.apply(value);
             case None<T> ignored -> none();
         };
     }
