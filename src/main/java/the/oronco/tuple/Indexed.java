@@ -3,6 +3,7 @@ package the.oronco.tuple;
 import java.util.Objects;
 import java.util.stream.Stream;
 import org.springframework.data.util.StreamUtils;
+import the.oronco.adt.Option;
 import the.oronco.adt.Result;
 import the.oronco.tuple.Indexed.Value0;
 import the.oronco.tuple.Indexed.Value1;
@@ -39,7 +40,7 @@ public sealed interface Indexed permits Value0, Value1, Value2, Value3, Value4, 
                      .allMatch(this::contains);
     }
 
-    default Result<Object, IndexError> get(int index) {
+    default Result<Option<Object>, IndexError> get(int index) {
         if (index < 0) {
             return Result.err(new IndexSmallerZeroError(index));
         } else {
@@ -60,9 +61,9 @@ public sealed interface Indexed permits Value0, Value1, Value2, Value3, Value4, 
         }
 
         @Override
-        default Result<Object, IndexError> get(int index) {
+        default Result<Option<Object>, IndexError> get(int index) {
             if (index == 0) {
-                return Result.ok(this._0());
+                return Result.ok(Option.from(this._0()));
             } else {
                 return Indexed.super.get(index);
             }
@@ -82,9 +83,9 @@ public sealed interface Indexed permits Value0, Value1, Value2, Value3, Value4, 
         }
 
         @Override
-        default Result<Object, IndexError> get(int index) {
+        default Result<Option<Object>, IndexError> get(int index) {
             if (index == 1) {
-                return Result.ok(this._1());
+                return Result.ok(Option.from(this._1()));
             } else {
                 return Value0.super.get(index);
             }
@@ -104,9 +105,9 @@ public sealed interface Indexed permits Value0, Value1, Value2, Value3, Value4, 
         }
 
         @Override
-        default Result<Object, IndexError> get(int index) {
+        default Result<Option<Object>, IndexError> get(int index) {
             if (index == 2) {
-                return Result.ok(this._2());
+                return Result.ok(Option.from(Result.ok(this._2())));
             } else {
                 return Value1.super.get(index);
             }
@@ -126,9 +127,9 @@ public sealed interface Indexed permits Value0, Value1, Value2, Value3, Value4, 
         }
 
         @Override
-        default Result<Object, IndexError> get(int index) {
+        default Result<Option<Object>, IndexError> get(int index) {
             if (index == 3) {
-                return Result.ok(this._3());
+                return Result.ok(Option.from(Result.ok(this._3())));
             } else {
                 return Value2.super.get(index);
             }
@@ -148,9 +149,9 @@ public sealed interface Indexed permits Value0, Value1, Value2, Value3, Value4, 
         }
 
         @Override
-        default Result<Object, IndexError> get(int index) {
+        default Result<Option<Object>, IndexError> get(int index) {
             if (index == 4) {
-                return Result.ok(this._4());
+                return Result.ok(Option.from(Result.ok(this._4())));
             } else {
                 return Value3.super.get(index);
             }
@@ -170,9 +171,9 @@ public sealed interface Indexed permits Value0, Value1, Value2, Value3, Value4, 
         }
 
         @Override
-        default Result<Object, IndexError> get(int index) {
+        default Result<Option<Object>, IndexError> get(int index) {
             if (index == 5) {
-                return Result.ok(this._5());
+                return Result.ok(Option.from(Result.ok(this._5())));
             } else {
                 return Value4.super.get(index);
             }
@@ -192,9 +193,9 @@ public sealed interface Indexed permits Value0, Value1, Value2, Value3, Value4, 
         }
 
         @Override
-        default Result<Object, IndexError> get(int index) {
+        default Result<Option<Object>, IndexError> get(int index) {
             if (index == 6) {
-                return Result.ok(this._6());
+                return Result.ok(Option.from(Result.ok(this._6())));
             } else {
                 return Value5.super.get(index);
             }
@@ -215,9 +216,9 @@ public sealed interface Indexed permits Value0, Value1, Value2, Value3, Value4, 
         }
 
         @Override
-        default Result<Object, IndexError> get(int index) {
+        default Result<Option<Object>, IndexError> get(int index) {
             if (index == 7) {
-                return Result.ok(this._7());
+                return Result.ok(Option.from(Result.ok(this._7())));
             } else {
                 return Value6.super.get(index);
             }
@@ -238,9 +239,9 @@ public sealed interface Indexed permits Value0, Value1, Value2, Value3, Value4, 
         }
 
         @Override
-        default Result<Object, IndexError> get(int index) {
+        default Result<Option<Object>, IndexError> get(int index) {
             if (index == 8) {
-                return Result.ok(this._8());
+                return Result.ok(Option.from(Result.ok(this._8())));
             } else {
                 return Value7.super.get(index);
             }
@@ -261,9 +262,9 @@ public sealed interface Indexed permits Value0, Value1, Value2, Value3, Value4, 
         }
 
         @Override
-        default Result<Object, IndexError> get(int index) {
+        default Result<Option<Object>, IndexError> get(int index) {
             if (index == 9) {
-                return Result.ok(this._9());
+                return Result.ok(Option.from(Result.ok(this._9())));
             } else {
                 return Value8.super.get(index);
             }
