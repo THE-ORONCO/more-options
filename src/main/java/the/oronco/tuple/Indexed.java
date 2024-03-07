@@ -1,6 +1,8 @@
 package the.oronco.tuple;
 
 import java.util.Objects;
+import java.util.stream.Stream;
+import org.springframework.data.util.StreamUtils;
 import the.oronco.adt.Result;
 import the.oronco.tuple.Indexed.Value0;
 import the.oronco.tuple.Indexed.Value1;
@@ -25,6 +27,16 @@ public sealed interface Indexed permits Value0, Value1, Value2, Value3, Value4, 
 
     default boolean contains(Object other) {
         return false;
+    }
+
+    default boolean containsAll(Iterable<?> others) {
+        return StreamUtils.createStreamFromIterator(others.iterator())
+                          .allMatch(this::contains);
+    }
+
+    default boolean containsAll(Object... others) {
+        return Stream.of(others)
+                     .allMatch(this::contains);
     }
 
     default Result<Object, IndexError> get(int index) {
