@@ -1,13 +1,12 @@
 package the.oronco.tuple;
 
+import java.util.Collection;
+import java.util.List;
 import lombok.NonNull;
 import lombok.With;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 import the.oronco.adt.Result;
-
-import java.util.Collection;
-import java.util.List;
 
 /**
  * @author Théo Roncoletta
@@ -66,21 +65,4 @@ public record Unit<T0>(T0 _0) implements MultiValue<Unit<T0>, Unit<T0>, Unit<T0>
     public @NotNull Unit<T0> rotR() {
         return new Unit<>(_0);
     }
-
-    public <T1> @NotNull Pair<T0, T1> extend(T1 v1) {
-        return Pair.of(this._0, v1);
-    }
-
-    public <T1> @NotNull Pair<T0, T1> extend(Unit<T1> other) {
-        return this.extend(other._0);
-    }
-
-    public <T1, T2> @NotNull Triplet<T0, T1, T2> extend(T1 v1, T2 v2) {
-        return Triplet.of(this._0, v1, v2);
-    }
-
-    public <T1, T2> @NotNull Triplet<T0, T1, T2> extend(Pair<T1, T2> pair) {
-        return Triplet.of(this._0, pair._0(), pair._1());
-    }
-
 }

@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -49,8 +50,13 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
     @Unmodifiable
     record One<T>(@NotNull @NonNull T value) implements MultiOption<@NotNull T> {
     }
-    @Unmodifiable
-    record Many<T>(@NotNull @NonNull Collection<T> values) implements MultiOption<@NotNull T> {
+    @Unmodifiable record Many<T>(@NotNull @NonNull Collection<@NotNull @NonNull T> values) implements MultiOption<@NotNull T> {
+        public Many {
+            if (!values.stream()
+                       .allMatch(Objects::nonNull)) {
+                throw new NullPointerException("No null values are allowed in a MultiOption!");
+            }
+        }
     }
 
 
@@ -163,10 +169,9 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
         };
     }
 
-    default <C> @NotNull C wrap(@NotNull @NonNull Function<? super @NotNull Collection<? extends T>, ? extends @NotNull C> wrap) {
+    default <C> @NotNull C wrap(@NotNull @NonNull Function<? super @NotNull Collection<? extends @NotNull T>, ? extends @NotNull C> wrap) {
         return switch (this) {
-            case None<T> ignored -> //noinspection unchecked
-                    wrap.apply((Collection<? extends T>) Collections.EMPTY_LIST);
+            case None<T> ignored -> wrap.apply(Collections.emptyList());
             case One<T>(T value) -> wrap.apply(Collections.singleton(value));
             case Many<T>(var values) -> wrap.apply(values);
         };
@@ -181,7 +186,7 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
      * @throws NoSuchElementException with the given Error message when the {@code Option<T>} is
      *                                {@code None<T>}
      */
-    default @NotNull Collection<T> expect(@NotNull @NonNull String errorMessage) throws
+    default @NotNull Collection<T> unwrap(@NotNull @NonNull String errorMessage) throws
                                                                                  @NotNull NoSuchElementException {
         return switch (this) {
             case None<T> ignored -> throw new NoSuchElementException(errorMessage);
@@ -198,7 +203,7 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
      * @throws NoSuchElementException with the given Error message when the {@code Option<T>} is
      *                                {@code None<T>}
      */
-    default <X extends Exception> @NotNull Collection<T> expect(@NotNull @NonNull X exception) throws
+    default <X extends Exception> @NotNull Collection<T> unwrap(@NotNull @NonNull X exception) throws
                                                                                                @NotNull X {
         return switch (this) {
             case None<T> ignored -> throw exception;
@@ -216,7 +221,7 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
      * @throws NoSuchElementException with the given Error message when the {@code Option<T>} is
      *                                {@code None<T>}
      */
-    default <X extends Exception> @NotNull Collection<T> expectElse(@NotNull @NonNull Supplier<X> exceptionSupplier) throws
+    default <X extends Exception> @NotNull Collection<T> unwrapElse(@NotNull @NonNull Supplier<? extends @NotNull X> exceptionSupplier) throws
                                                                                                                      @NotNull X {
 
         return switch (this) {
@@ -228,7 +233,7 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
 
     /**
      * Returns the contained {@code One<T>} value or {@code Many<T>} values and throws otherwise.
-     * (Similar to {@link MultiOption#expect(String)} but, without a custom error message)
+     * (Similar to {@link MultiOption#unwrap(String)} but, without a custom error message)
      * <p>
      * The usage of this method is discouraged as control flow through exceptions can be hard to
      * understand and organize. Use {@link MultiOption#unwrapOr(Collection)} or
@@ -258,7 +263,7 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
      *
      * @return the value if the {@code Option<T>} is {@code Some<T>} and the default value otherwise
      */
-    default @NotNull Collection<T> unwrapOr(@NotNull @NonNull Collection<T> defaultValue) {
+    default @NotNull Collection<T> unwrapOr(@NotNull @NonNull Collection<@NotNull T> defaultValue) {
         return switch (this) {
             case None<T> ignored -> defaultValue;
             case One<T>(T value) -> new ArrayList<>(Collections.singleton(value));
@@ -334,9 +339,9 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
      * Returns the provided default result (if {@code None<T>}), or applies a {@code Fuction<T,R>}
      * to the contained value (if {@code One}) or values (if {@code Many<T>}).
      * <p>
-     * Arguments passed to {@link MultiOption#mapOr(Collection, Function)} are eagerly evaluated; if
+     * Arguments passed to {@link MultiOption#mapOr(Function, Collection)} are eagerly evaluated; if
      * you are passing the result of a function call, it is recommended to use
-     * {@link MultiOption#mapOrElse(Supplier, Function)}, which is lazily evaluated.
+     * {@link MultiOption#mapOrElse(Function, Supplier)}, which is lazily evaluated.
      *
      * @param defaultValue default value that is returned if {@code None<T>}
      * @param f            function that converts the value in case of {@code One<T>} and values in
@@ -345,8 +350,8 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
      *
      * @return the mapped value or the default value if {@code None<T>}
      */
-    default <R> @NotNull Collection<R> mapOr(@NotNull @NonNull Collection<R> defaultValue,
-                                             @NotNull @NonNull Function<? super @NotNull T, ? extends @NotNull R> f) {
+    default <R> @NotNull Collection<R> mapOr(@NotNull @NonNull Function<? super @NotNull T, ? extends @NotNull R> f,
+                                             @NotNull @NonNull Collection<@NotNull R> defaultValue) {
         return switch (this) {
             case None<T> ignored -> defaultValue;
             case One<T>(T value) -> Collections.singletonList(f.apply(value));
@@ -360,7 +365,7 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
      * + Computes a default function result (if {@code None}), or applies a different function to
      * the contained value (if {@code One}) or values (if {@code Many<T>}).
      *
-     * @param defaultSupplier {@code Supplier<? extends Collection<? extends R>>} that supplies a
+     * @param defaultSupplier {@code Supplier} that supplies a
      *                        value(s) if {@code None}
      * @param f               function that converts the value in case of {@code Some<T>} and values
      *                        of {@code Many<T>}
@@ -368,8 +373,8 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
      *
      * @return the mapped value or the default value if {@code None}
      */
-    default <R> @NotNull Collection<R> mapOrElse(@NotNull @NonNull Supplier<? extends @NotNull Collection<R>> defaultSupplier,
-                                                 @NotNull @NonNull Function<? super @NotNull T, ? extends @NotNull R> f) {
+    default <R> @NotNull Collection<R> mapOrElse(@NotNull @NonNull Function<? super @NotNull T, ? extends @NotNull R> f,
+                                                 @NotNull @NonNull Supplier<? extends @NotNull Collection<@NotNull R>> defaultSupplier) {
         return switch (this) {
             case None<T> ignored -> defaultSupplier.get();
             case One<T>(T value) -> Collections.singletonList(f.apply(value));
@@ -403,7 +408,7 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
      *
      * @return a {@link MultiOption} according to the above rules
      */
-    static <T> @NotNull MultiOption<T> from(@NotNull @NonNull Iterator<@NotNull T> unknownAmount) {
+    static <T> @NotNull MultiOption<T> from(@NotNull @NonNull Iterator<? extends @NotNull T> unknownAmount) {
         ArrayList<T> accumulator = new ArrayList<>();
         while (unknownAmount.hasNext()) {
             accumulator.add(unknownAmount.next());
@@ -434,7 +439,7 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
      *
      * @return a {@link MultiOption} according to the above rules
      */
-    static <T> @NotNull MultiOption<T> from(@NotNull @NonNull Iterable<@NotNull T> unknownAmount) {
+    static <T> @NotNull MultiOption<T> from(@NotNull @NonNull Iterable<? extends @NotNull T> unknownAmount) {
         ArrayList<T> accumulator = new ArrayList<>();
         for (T t : unknownAmount) {
             accumulator.add(t);
@@ -467,18 +472,18 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
      */
     static <T> @NotNull MultiOption<T> from(Collection<@NotNull T> unknownAmount) {
         if (unknownAmount == null || unknownAmount.isEmpty()) {
-            return new None<>();
+            return none();
 
         } else if (unknownAmount.size() == 1) {
             var it = unknownAmount.iterator();
             if (it.hasNext()) {
-                return new One<>(it.next());
+                return one(it.next());
             } else {
-                return new None<>();
+                return none();
             }
 
         } else {
-            return new Many<>(unknownAmount);
+            return many(unknownAmount);
         }
     }
 
@@ -525,12 +530,12 @@ public sealed interface MultiOption<T> extends Rusty<Collection<T>>, Streamable<
         return new One<>(single);
     }
 
-    static <T> @NotNull MultiOption<T> many(@NotNull @NonNull Collection<T> many) {
-        return new Many<>(many);
+    static <T> @NotNull MultiOption<T> many(@NotNull @NonNull Collection<@NotNull T> many) {
+        return (MultiOption<T>) new Many<>(many);
     }
 
     @SafeVarargs
     static <T> @NotNull MultiOption<T> many(@NotNull @NonNull T... many) {
-        return new Many<>(Arrays.asList(many));
+        return many(Arrays.asList(many));
     }
 }

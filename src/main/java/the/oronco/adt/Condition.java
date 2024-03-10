@@ -1,6 +1,5 @@
 package the.oronco.adt;
 
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -12,7 +11,9 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.ToString;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import the.oronco.Rusty;
+import the.oronco.adt.exceptions.ConditionDoesNotHoldException;
 import the.oronco.adt.exceptions.ValueNotValidForBoundError;
 
 /**
@@ -86,10 +87,10 @@ public sealed interface Condition<T> extends Rusty<Optional<T>> {
      * @return the value if the {@code Condition<T>} is {@code Holds<T>}
      * @throws java.util.NoSuchElementException with the given Error message when the {@code Condition<T>} is {@code HoldsNot<T>}
      */
-    default @NotNull T expect(String errorMessage) throws @NotNull NoSuchElementException {
+    default @NotNull T unwrap(String errorMessage) throws @NotNull ConditionDoesNotHoldException {
         return switch (this) {
             case Holds<T>(T value, var ignored) -> value;
-            case HoldsNot<T> ignored -> throw new NoSuchElementException(errorMessage);
+            case HoldsNot<T> ignored -> throw new ConditionDoesNotHoldException(errorMessage);
         };
     }
 
@@ -98,7 +99,7 @@ public sealed interface Condition<T> extends Rusty<Optional<T>> {
      * @return the value if the {@code Condition<T>} is {@code Holds<T>}
      * @throws E with the given Exception when the {@code Condition<T>} is {@code HoldsNot<T>}
      */
-    default @NotNull <E extends Exception> T expect(@NonNull E errorMessage) throws @NotNull E {
+    default @NotNull <E extends Exception> T unwrap(@NonNull E errorMessage) throws @NotNull E {
         return switch (this) {
             case Holds<T>(T value, var ignored) -> value;
             case HoldsNot<T> ignored -> throw errorMessage;
@@ -110,7 +111,8 @@ public sealed interface Condition<T> extends Rusty<Optional<T>> {
      * @return the value if the {@code Condition<T>} is {@code Holds<T>}
      * @throws E with the given Exception when the {@code Condition<T>} is {@code HoldsNot<T>}
      */
-    default @NotNull <E extends Exception> T expectElse(@NotNull @NonNull Supplier<@NotNull E> exceptionSupplier) throws @NotNull E {
+    default @NotNull <E extends Exception> T unwrapElse(@NotNull @NonNull Supplier<@NotNull E> exceptionSupplier) throws
+                                                                                                                  @NotNull E {
         return switch (this) {
             case Holds<T>(T value, var ignored) -> value;
             case HoldsNot<T> ignored -> throw exceptionSupplier.get();
@@ -118,7 +120,7 @@ public sealed interface Condition<T> extends Rusty<Optional<T>> {
     }
 
     /**
-     * Returns the contained {@code Holds<T>} value and throws otherwise. (Similar to {@link Condition#expect(String)} but without a custom error
+     * Returns the contained {@code Holds<T>} value and throws otherwise. (Similar to {@link Condition#unwrap(String)} but without a custom error
      * message)
      * <p>
      * The usage of this method is discouraged as control flow through exceptions can be hard to understand and organize. Use
@@ -127,10 +129,10 @@ public sealed interface Condition<T> extends Rusty<Optional<T>> {
      * @return the value if the {@code Condition<T>} is {@code Holds<T>}
      * @throws java.util.NoSuchElementException when the {@code Condition<T>} is {@code HoldsNot<T>}
      */
-    default @NotNull T unwrap() throws @NotNull NoSuchElementException {
+    default @NotNull T unwrap() throws @NotNull ConditionDoesNotHoldException {
         return switch (this) {
             case Holds<T>(T value, var ignored) -> value;
-            case HoldsNot<T> ignored -> throw new NoSuchElementException("Condition was unwrapped but it had no value!");
+            case HoldsNot<T> ignored -> throw new ConditionDoesNotHoldException("Condition was unwrapped while it did not hold!");
         };
     }
 
@@ -225,10 +227,8 @@ public sealed interface Condition<T> extends Rusty<Optional<T>> {
      * @return an option that is either {@code Some<T>} and conforms to the {@code Predicate<? super T>} or {@code None<T>}
      */
     default @NotNull Condition<T> filter(@NotNull @NonNull Predicate<? super @NotNull T> predicate) {
-        if (this instanceof Holds<T>(T value, var bound)) {
-            if (predicate.test(value)) {
-                return holds(value, bound);
-            }
+        if (this instanceof Holds<T>(T value, var bound) && (predicate.test(value))) {
+            return holds(value, bound);
         }
         return holdsNot();
     }
@@ -255,22 +255,25 @@ public sealed interface Condition<T> extends Rusty<Optional<T>> {
         };
     }
 
-    static <T> @NotNull Condition<T> conditionFrom(
+    static <T> @NotNull Condition<T> fromOptional(
             @SuppressWarnings("OptionalUsedAsFieldOrParameterType") @NotNull @NonNull Optional<T> optional,
             @NotNull @NonNull Predicate<? super @NotNull T> bound) {
         return optional.map(val -> from(val, bound))
                        .orElseGet(Condition::holdsNot);
     }
 
-    static <T> @NotNull Condition<T> from(T value, @NotNull Predicate<? super @NotNull T> bound) {
-        return Option.from(value)
-                     .map(v -> holds(v, bound))
-                     .unwrapOr(holdsNot());
-    }
-    static <T> @NotNull Condition<T> from(T value) {
-        return Option.from(value)
-                     .map(Condition::holds)
+    static <T> @NotNull Condition<T> fromOption(@NotNull @NonNull Option<T> option,
+                                                @NotNull @NonNull Predicate<? super @NotNull T> bound) {
+        return option.map(val -> from(val, bound))
                      .unwrapOrElse(Condition::holdsNot);
+    }
+
+    static <T> @NotNull Condition<T> from(@Nullable T value, @NotNull Predicate<? super @NotNull T> bound) {
+        return fromOption(Option.from(value), bound);
+    }
+
+    static <T> @NotNull Condition<T> from(@Nullable T value) {
+        return fromOption(Option.from(value), ALWAYS_TRUE);
 
     }
 
