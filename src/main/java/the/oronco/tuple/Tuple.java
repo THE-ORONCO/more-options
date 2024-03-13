@@ -17,8 +17,8 @@ import the.oronco.tuple.TupleError.IndexError;
 import the.oronco.tuple.TupleError.IndexError.IndexSmallerZeroError;
 import the.oronco.tuple.TupleError.IndexError.IndexTooLargeError;
 
+import java.util.Arrays;
 import java.util.Objects;
-import java.util.stream.Stream;
 
 /**
  * @author Théo Roncoletta
@@ -37,7 +37,7 @@ public sealed interface Tuple permits Size1, Size2, Size3, Size4, Size5, Size6, 
     }
 
     default boolean containsAll(Object... others) {
-        return Stream.of(others)
+        return Arrays.stream(others)
                      .allMatch(this::contains);
     }
 
