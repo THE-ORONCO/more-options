@@ -1,5 +1,6 @@
 package the.oronco.iter;
 
+import org.jetbrains.annotations.NotNull;
 import the.oronco.adt.Option;
 
 /**
@@ -15,7 +16,7 @@ public class Fuse<T> implements Iter<T> {
     }
 
     @Override
-    public Option<T> next() {
+    public @NotNull Option<T> next() {
         return null;
     }
 }

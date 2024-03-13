@@ -1,17 +1,19 @@
 package the.oronco.iter;
 
-import java.util.function.Predicate;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import org.jetbrains.annotations.NotNull;
 import the.oronco.adt.Option;
 
+import java.util.function.Predicate;
+
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
-public class Filter<T, P extends Predicate<? super T>> implements Iter<T> {
-    private final Iter<T> iter;
-    private final P predicate;
+public class Filter<T, P extends Predicate<? super @NotNull T>> implements Iter<T> {
+    private final @NotNull Iter<T> iter;
+    private final @NotNull P predicate;
 
     @Override
-    public Option<T> next() {
+    public @NotNull Option<T> next() {
         return null;
     }
 }

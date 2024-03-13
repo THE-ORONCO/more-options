@@ -1,17 +1,20 @@
 package the.oronco.iter;
 
-import java.util.function.Function;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 import the.oronco.adt.Option;
+
+import java.util.function.Function;
 
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 public class MapWhile<B, T, F extends Function<? super T, Option<B>>> implements Iter<T> {
-    private final Iter<T> iter;
-    private final F predicate;
+    private final @NotNull @NonNull Iter<T> iter;
+    private final @NotNull @NonNull F predicate;
 
     @Override
-    public Option<T> next() {
+    public @NotNull Option<T> next() {
         return null;
     }
 }

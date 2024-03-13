@@ -1,8 +1,10 @@
 package the.oronco.iter;
 
+import org.jetbrains.annotations.NotNull;
+import the.oronco.adt.Option;
+
 import java.util.Objects;
 import java.util.function.Predicate;
-import the.oronco.adt.Option;
 
 public class Peekable<T> implements Iter<T> {
     private final Iter<T> iter;
@@ -42,7 +44,7 @@ public class Peekable<T> implements Iter<T> {
 
 
     @Override
-    public Option<T> next() {
+    public @NotNull Option<T> next() {
         return switch (peeked) {
             case Option.Some<T> some -> some;
             case Option.None<T> ignored -> this.iter.next();

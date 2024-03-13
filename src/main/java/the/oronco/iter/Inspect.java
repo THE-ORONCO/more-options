@@ -1,10 +1,11 @@
 package the.oronco.iter;
 
-import java.util.function.Consumer;
-import java.util.function.Function;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import org.jetbrains.annotations.NotNull;
 import the.oronco.adt.Option;
+
+import java.util.function.Consumer;
 
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 public class Inspect< T, F extends Consumer<? super T>> implements Iter<T> {
@@ -12,7 +13,7 @@ public class Inspect< T, F extends Consumer<? super T>> implements Iter<T> {
     private final F f;
 
     @Override
-    public Option<T> next() {
+    public @NotNull Option<T> next() {
         return null;
     }
 }

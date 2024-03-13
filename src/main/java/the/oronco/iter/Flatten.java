@@ -1,7 +1,6 @@
 package the.oronco.iter;
 
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
+import org.jetbrains.annotations.NotNull;
 import the.oronco.adt.Option;
 
 /**
@@ -15,7 +14,7 @@ public class Flatten<T> implements Iter<T> {
         this.inner = new FlattenCompat<>(inner);}
 
     @Override
-    public Option<T> next() {
+    public @NotNull Option<T> next() {
         return null;
     }
 }

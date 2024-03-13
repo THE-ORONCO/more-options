@@ -1,5 +1,6 @@
 package the.oronco.iter;
 
+import org.jetbrains.annotations.NotNull;
 import the.oronco.adt.Option;
 
 /**
@@ -18,7 +19,7 @@ public class ArrayChunks<T, I extends Iter<T>> implements Iter<T> {
     }
 
     @Override
-    public Option<T> next() {
+    public @NotNull Option<T> next() {
         return null;
     }
 }

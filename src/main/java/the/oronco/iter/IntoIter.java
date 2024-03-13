@@ -1,5 +1,7 @@
 package the.oronco.iter;
 
-public interface IntoIter<T, I extends Iter<T>> {
-    I intoIter();
+import org.jetbrains.annotations.NotNull;
+
+public interface IntoIter<T, I extends Iter<@NotNull T>> {
+    @NotNull I intoIter();
 }

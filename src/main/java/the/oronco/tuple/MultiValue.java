@@ -20,7 +20,7 @@ import java.util.function.Function;
 public sealed interface MultiValue<T extends MultiValue<T, L, R> & LeftRotation<L> & RightRotation<R>, L extends LeftRotation<?>,
         R extends RightRotation<?>>
         extends RightRotation<R>, LeftRotation<L>, Rusty<Collection<Object>>, Serializable, Iterable<Object>, Tuple
-        permits Unit, Pair, Triplet, Quartet, Quintet, Sextet, Septet, Octet, Ennead, Decade {
+        permits Decade, Ennead, Octet, Pair, Quartet, Quintet, Septet, Sextet, Triplet, Unit, Empty {
 
     @SuppressWarnings("unchecked") // safe because T refers to the own type when the tuples are implemented correctly
     default <O> O map(@NotNull @NonNull Function<? super @NotNull T, ? extends O> f) {

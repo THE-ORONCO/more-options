@@ -1,10 +1,11 @@
 package the.oronco.iter;
 
+import org.jetbrains.annotations.NotNull;
 import the.oronco.adt.Option;
 
 public class Intersperse<T, I extends Iter<T>> implements Iter<T> {
-    private final Peekable<T> iter;
-    private final T separator;
+    private final @NotNull Peekable<T> iter;
+    private final @NotNull T separator;
     private boolean needsSep;
 
     protected Intersperse(I iter, T separator) {
@@ -15,7 +16,7 @@ public class Intersperse<T, I extends Iter<T>> implements Iter<T> {
 
 
     @Override
-    public Option<T> next() {
+    public @NotNull Option<T> next() {
         if (this.needsSep && this.iter.peek()
                                       .isSome()) {
             this.needsSep = false;

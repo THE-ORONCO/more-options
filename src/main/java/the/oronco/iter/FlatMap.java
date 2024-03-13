@@ -1,10 +1,11 @@
 package the.oronco.iter;
 
-import java.util.function.Function;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import org.jetbrains.annotations.NotNull;
 import the.oronco.adt.Option;
-import the.oronco.adt.Self;
+
+import java.util.function.Function;
 
 /**
  * @author the_oronco@posteo.net
@@ -16,7 +17,7 @@ public class FlatMap<T, I extends Iter<T>, R, J extends Iter<R>, F extends Funct
     private F f;
 
     @Override
-    public Option<R> next() {
+    public @NotNull Option<R> next() {
         return null;
     }
 }

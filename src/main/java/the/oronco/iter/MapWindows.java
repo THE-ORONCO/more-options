@@ -1,10 +1,12 @@
 package the.oronco.iter;
 
-import java.util.List;
-import java.util.function.Function;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import org.jetbrains.annotations.NotNull;
 import the.oronco.adt.Option;
+
+import java.util.List;
+import java.util.function.Function;
 
 public class MapWindows<T, I extends Iter<T>, F extends Function<? extends List<T>, R>, R> implements Iter<T> {
     private final int n;
@@ -18,7 +20,7 @@ public class MapWindows<T, I extends Iter<T>, F extends Function<? extends List<
     }
 
     @Override
-    public Option<T> next() {
+    public @NotNull Option<T> next() {
         return null;
     }
 
