@@ -1,11 +1,14 @@
 package the.oronco.adt;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
 
 class OptionTest {
 
@@ -53,14 +56,14 @@ class OptionTest {
     @Test
     void expectNothing() {
         var none = Option.none();
-        assertThrows(NoSuchElementException.class, () -> none.expect("Error"));
+        assertThrows(NoSuchElementException.class, () -> none.unwrap("Error"));
     }
 
     @Test
     void expectSomething() {
         String someValue = "something";
         var some = Option.some(someValue);
-        var value = assertDoesNotThrow(() -> some.expect("Error"));
+        var value = assertDoesNotThrow(() -> some.unwrap("Error"));
         assertEquals(someValue, value);
     }
 

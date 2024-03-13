@@ -2,7 +2,15 @@ package the.oronco.adt;
 
 import java.util.function.Function;
 
+import lombok.NonNull;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NonNls;
+import org.jetbrains.annotations.NotNull;
+
 /**
+ * Describes a control flow through the type system. This allows (if the compiler is clever which in java it isn't) for highly optimized
+ * code as execution paths might be determined at compile time.
+ *
  * @author the_oronco@posteo.net
  * @since 11/02/2024
  */

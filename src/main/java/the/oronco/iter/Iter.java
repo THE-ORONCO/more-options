@@ -1,11 +1,6 @@
 package the.oronco.iter;
 
-import java.util.function.BiFunction;
-import java.util.function.BiPredicate;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
+import lombok.SneakyThrows;
 import the.oronco.adt.ControlFlow;
 import the.oronco.adt.ControlFlow.Break;
 import the.oronco.adt.ControlFlow.Continue;
@@ -13,6 +8,13 @@ import the.oronco.adt.Option;
 import the.oronco.adt.Result;
 import the.oronco.adt.Try;
 import the.oronco.tuple.Twople;
+
+import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 // TODO implement all methods
 // TODO implement the class functionalities behind the methods
@@ -186,6 +188,7 @@ public interface Iter<T> extends IntoIter<T, Iter<T>> {
         return this.tryFold(null, call.apply(f));
     }
 
+    @SneakyThrows
     default <B> B fold(B init, BiFunction<? super B, ? super T, ? extends B> f) {
         B accum = init;
         var a = this.next();

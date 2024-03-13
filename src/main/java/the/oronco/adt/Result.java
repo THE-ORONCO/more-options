@@ -1,5 +1,23 @@
 package the.oronco.adt;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+import lombok.NonNull;
+import org.intellij.lang.annotations.MagicConstant;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Unmodifiable;
+import org.springframework.data.util.Streamable;
+import the.oronco.Rusty;
+import the.oronco.adt.ControlFlow.Break;
+import the.oronco.adt.ControlFlow.Continue;
+import the.oronco.adt.exceptions.ResultExpectedToBeErrorException;
+import the.oronco.adt.exceptions.ResultExpectedToBeOkException;
+import the.oronco.adt.exceptions.WrongKindOfExceptionError;
+import the.oronco.adt.funcs.ThrowingFunction;
+
+import java.io.Serializable;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -8,40 +26,42 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
-import the.oronco.Rusty;
 
 // TODO examples like in the rust documentation
 // TODO replace exceptions with better exceptions
 // TODO tests
-public sealed interface Result<T, E> extends Rusty<Optional<T>>, Try<T, Result<Infallible, E>> {
-    @ToString
-    @EqualsAndHashCode
-    @AllArgsConstructor(access = AccessLevel.PRIVATE)
-    final class Ok<T, E> implements Result<T, E> {
-        private final T result;
+@Unmodifiable
+public sealed interface Result<T, E> extends Rusty<Optional<T>>, Try<T, Result<Infallible, E>>, Streamable<T>, Serializable {
+    /**
+     * When the Result should be an OK but the actual value does not matter.
+     */
+    @Unmodifiable
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    class GOOD {}
 
-        public T result() {return result;}
+    @MagicConstant
+    Result.GOOD GOOD = new GOOD();
+
+    @Unmodifiable record Ok<T, E>(@NotNull @NonNull T result) implements Result<@NotNull T, @NotNull E> {
+        @Contract(value = "-> new", pure = true)
+        public <F> Result<T, F> as() {
+            return Result.ok(this.result);
+        }
     }
 
-    @ToString
-    @EqualsAndHashCode
-    @AllArgsConstructor(access = AccessLevel.PRIVATE)
-    final class Err<T, E> implements Result<T, E> {
-        private final E error;
-
-        public E error() {return error;}
+    @Unmodifiable record Err<T, E>(@NotNull @NonNull E error) implements Result<T, E> {
+        @Contract(value = "-> new", pure = true)
+        @Unmodifiable
+        public <R> Result<R, E> as() {
+            return Result.err(this.error);
+        }
     }
 
+    @Contract(pure = true)
     default boolean isOk() {
         return switch (this) {
-            case Ok<T, E> ignored:
-                yield true;
-            case Err<T, E> ignored:
-                yield false;
+            case Ok<T, E> ignored -> true;
+            case Err<T, E> ignored -> false;
         };
     }
 
@@ -52,21 +72,17 @@ public sealed interface Result<T, E> extends Rusty<Optional<T>>, Try<T, Result<I
      *
      * @return if the result is {@code Ok<T,E>} and conforms to the given predicate
      */
-    default boolean isOkAnd(Predicate<? super T> predicate) {
+    default boolean isOkAnd(@NotNull @NonNull Predicate<? super @NotNull T> predicate) {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield predicate.test(ok.result);
-            case Err<T, E> ignored:
-                yield false;
+            case Ok<T, E>(T result) -> predicate.test(result);
+            case Err<T, E> ignored -> false;
         };
     }
 
     default boolean isErr() {
         return switch (this) {
-            case Ok<T, E> ignored:
-                yield false;
-            case Err<T, E> ignored:
-                yield true;
+            case Ok<T, E> ignored -> false;
+            case Err<T, E> ignored -> true;
         };
     }
 
@@ -77,12 +93,10 @@ public sealed interface Result<T, E> extends Rusty<Optional<T>>, Try<T, Result<I
      *
      * @return if the result is {@code Err<T,E>} and conforms to the given predicate
      */
-    default boolean isErrAnd(Predicate<? super E> predicate) {
+    default boolean isErrAnd(@NotNull @NonNull Predicate<? super @NotNull E> predicate) {
         return switch (this) {
-            case Ok<T, E> ignored:
-                yield false;
-            case Err<T, E> err:
-                yield predicate.test(err.error);
+            case Ok<T, E> ignored -> false;
+            case Err<T, E>(E error) -> predicate.test(error);
         };
     }
 
@@ -91,12 +105,10 @@ public sealed interface Result<T, E> extends Rusty<Optional<T>>, Try<T, Result<I
      *
      * @return an {@code Option<T>} representing the {@code Ok<T, E>} if any
      */
-    default Option<T> ok() {
+    default @NotNull Option<T> ok() {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield Option.some(ok.result);
-            case Err<T, E> ignored:
-                yield Option.none();
+            case Ok<T, E>(T result) -> Option.some(result);
+            case Err<T, E> ignored -> Option.none();
         };
     }
 
@@ -105,18 +117,16 @@ public sealed interface Result<T, E> extends Rusty<Optional<T>>, Try<T, Result<I
      *
      * @return an {@code Option<E>} representing the {@code Err<T, E>} if any
      */
-    default Option<E> err() {
+    default @NotNull Option<E> err() {
         return switch (this) {
-            case Ok<T, E> ignored:
-                yield Option.none();
-            case Err<T, E> err:
-                yield Option.some(err.error);
+            case Ok<T, E> ignored -> Option.none();
+            case Err<T, E>(E error) -> Option.some(error);
         };
     }
 
     /**
-     * Maps a {@code Result<T, E>} to {@code Result<U, E>} by applying a function to a contained {@code Ok<T, E>} value, leaving an
-     * {@code Err<T, E>} value untouched.
+     * Maps a {@code Result<T, E>} to {@code Result<U, E>} by applying a function to a contained {@code Ok<T, E>} value, leaving
+     * an {@code Err<T, E>} value untouched.
      * <p>
      * This function can be used to compose the results of two functions.
      *
@@ -125,38 +135,63 @@ public sealed interface Result<T, E> extends Rusty<Optional<T>>, Try<T, Result<I
      *
      * @return a new result with a converted value
      */
-    default <U> Result<U, E> map(Function<? super T, ? extends U> f) {
+    @Override
+    default <U> @NotNull Result<U, E> map(@NotNull @NonNull Function<? super @NotNull T, ? extends @NotNull U> f) {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield ok(f.apply(ok.result));
-            case Err<T, E> err:
-                yield err(err.error);
+            case Ok<T, E> ok -> ok(f.apply(ok.result));
+            case Err<T, E>(E error) -> err(error);
+        };
+    }
+
+    /**
+     * Maps a {@code Result<T, E>} to {@code Result<U, E>} by applying a function to a contained {@code Ok<T, E>} value, leaving
+     * an {@code Err<T, E>} value untouched.
+     * <p>
+     * When the method throws the expected Exception it will be converted into an error with the other supplied function.
+     * <p>
+     * This function can be used to compose the results of two functions.
+     *
+     * @param <U> result type of the conversion if {@code this} result was {@code Ok<T,E>}
+     * @param <X> type of the Exception that might be thrown by the method
+     * @param f   function that can convert {@code T} to {@code U}
+     * @param ef  function that can convert {@code X} to {@code E} to create an error in the throwing case
+     *
+     * @return a new result with a converted value
+     */
+    default <U, X extends Exception> @NotNull Result<? extends U, ? extends E> safeMap(@NotNull @NonNull ThrowingFunction<? super @NotNull T, ? extends @NotNull U, ? extends @NotNull X> f,
+                                                                                       @NotNull @NonNull Function<? super @NotNull X, ? extends @NotNull E> ef) throws
+                                                                                                                                                                WrongKindOfExceptionError {
+        return switch (this) {
+            case Result.Ok<T, E>(T result) -> f.andThen(r -> r.mapErr(ef))
+                                               .apply(result);
+            case Result.Err<T, E>(E error) -> Result.err(error);
         };
     }
 
     /**
      * Returns the provided default (if {@code Err<T,E>}), or applies a function to the contained value (if {@code Ok<T, E>}),
      * <p>
-     * Arguments passed to {@link Result#mapOr(Object, Function)} are eagerly evaluated; if you are passing the result of a function call,
-     * it is recommended to use {@link Result#mapOrElse(Function, Function)}, which is lazily evaluated.
+     * Arguments passed to {@link the.oronco.adt.Result#mapOr(java.util.function.Function, Object)} are eagerly evaluated; if you
+     * are passing the result of a function call, it is recommended to use
+     * {@link the.oronco.adt.Result#mapOrElse(java.util.function.Function, java.util.function.Function)}, which is lazily
+     * evaluated.
      *
      * @param f   function that can convert {@code T} to {@code U}
      * @param <U> result type of the conversion if {@code this} result was {@code Ok<T,E>}
      *
      * @return a new result with a converted value
      */
-    default <U> U mapOr(U defaultValue, Function<? super T, ? extends U> f) {
+    default <U> @NotNull U mapOr(@NotNull @NonNull Function<? super @NotNull T, ? extends @NotNull U> f,
+                                 @NotNull @NonNull U defaultValue) {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield f.apply(ok.result);
-            case Err<T, E> ignored:
-                yield defaultValue;
+            case Ok<T, E>(T result) -> f.apply(result);
+            case Err<T, E> ignored -> defaultValue;
         };
     }
 
     /**
-     * Maps a {@code Result<T, E>} to {@code U} by applying fallback function {@code d} to a contained {@code Err<T, E>} value, or function
-     * {@code f} to a contained {@code Ok<T, E>} value.
+     * Maps a {@code Result<T, E>} to {@code U} by applying fallback function {@code d} to a contained {@code Err<T, E>} value, or
+     * function {@code f} to a contained {@code Ok<T, E>} value.
      * <p>
      * This function can be used to unpack a successful result while handling an error.
      *
@@ -166,18 +201,17 @@ public sealed interface Result<T, E> extends Rusty<Optional<T>>, Try<T, Result<I
      *
      * @return the mapped result or a default value
      */
-    default <U> U mapOrElse(Function<? super E, ? extends U> d, Function<? super T, ? extends U> f) {
+    default <U> U mapOrElse(@NotNull @NonNull Function<? super @NotNull T, ? extends @NotNull U> f,
+                            @NotNull @NonNull Function<? super @NotNull E, ? extends @NotNull U> d) {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield f.apply(ok.result);
-            case Err<T, E> err:
-                yield d.apply(err.error);
+            case Ok<T, E> ok -> f.apply(ok.result);
+            case Err<T, E>(E error) -> d.apply(error);
         };
     }
 
     /**
-     * Maps a {@code Result<T, E>} to {@code Result<T, F>} by applying a function to a contained {@code Err<T, E>} value, leaving an
-     * {@code Ok<T, E>} value untouched.
+     * Maps a {@code Result<T, E>} to {@code Result<T, F>} by applying a function to a contained {@code Err<T, E>} value, leaving
+     * an {@code Ok<T, E>} value untouched.
      * <p>
      * This function can be used to pass through a successful result while handling an error.
      *
@@ -186,12 +220,10 @@ public sealed interface Result<T, E> extends Rusty<Optional<T>>, Try<T, Result<I
      *
      * @return a result containing either the unchanged successful result or a converted error
      */
-    default <U> Result<T, U> mapErr(Function<? super E, ? extends U> f) {
+    default <U> Result<T, U> mapErr(@NotNull @NonNull Function<? super @NotNull E, ? extends @NotNull U> f) {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield ok(ok.result);
-            case Err<T, E> err:
-                yield err(f.apply(err.error));
+            case Ok<T, E>(T result) -> ok(result);
+            case Err<T, E>(E error) -> err(f.apply(error));
         };
     }
 
@@ -205,9 +237,9 @@ public sealed interface Result<T, E> extends Rusty<Optional<T>>, Try<T, Result<I
      *
      * @return the result it was called on
      */
-    default Result<T, E> inspect(Consumer<? super T> f) {
-        if (this instanceof Ok<T, E> ok) {
-            f.accept(ok.result);
+    default @NotNull Result<T, E> inspect(@NotNull @NonNull Consumer<? super @NotNull T> f) {
+        if (this instanceof Ok<T, E>(T result)) {
+            f.accept(result);
         }
         return this;
     }
@@ -221,30 +253,36 @@ public sealed interface Result<T, E> extends Rusty<Optional<T>>, Try<T, Result<I
      *
      * @return the result it was called on
      */
-    default Result<T, E> inspectErr(Consumer<? super E> f) {
-        if (this instanceof Err<T, E> err) {
-            f.accept(err.error);
+    default @NotNull Result<T, E> inspectErr(@NotNull @NonNull Consumer<? super @NotNull E> f) {
+        if (this instanceof Err<T, E>(E error)) {
+            f.accept(error);
         }
         return this;
     }
 
-    default Iterator<T> iter() {
+    @Override
+    default @NotNull Iterator<T> iterator() {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield Stream.of(ok.result)
-                            .iterator();
-            case Err<T, E> ignored:
-                yield new Iterator<>() {
-                    @Override
-                    public boolean hasNext() {
-                        return false;
-                    }
+            case Ok<T, E>(T result) -> Stream.of(result)
+                                             .iterator();
+            case Err<T, E> ignored -> Collections.emptyIterator();
+        };
+    }
 
-                    @Override
-                    public T next() {
-                        return null;
-                    }
-                };
+    // TODO use custom iterator
+    default @NotNull Iterator<T> iter() {
+        return switch (this) {
+            case Ok<T, E>(T result) -> Stream.of(result)
+                                             .iterator();
+            case Err<T, E> ignored -> Collections.emptyIterator();
+        };
+    }
+
+    @Override
+    default @NotNull Stream<T> stream() {
+        return switch (this) {
+            case Ok<T, E>(T result) -> Stream.of(result);
+            case Err<T, E> ignored -> Stream.of();
         };
     }
 
@@ -252,20 +290,19 @@ public sealed interface Result<T, E> extends Rusty<Optional<T>>, Try<T, Result<I
      * Returns the contained {@code Ok<T, E>} value.
      * <p>
      * Because this function may throw, its use is generally discouraged. Instead, prefer to use pattern matching and handle the
-     * {@code Err<T, E>} case explicitly, or call {@link Result#unwrapOr(Object)} or {@link Result#unwrapOrElse(Supplier)}.
+     * {@code Err<T, E>} case explicitly, or call {@link the.oronco.adt.Result#unwrapOr(Object)} or
+     * {@link the.oronco.adt.Result#unwrapOrElse(java.util.function.Supplier)}.
      *
      * @param message the message of the thrown error
      *
      * @return the successful result
      *
-     * @throws NoSuchElementException when {@code this} is an {@code Err<T, E>}
+     * @throws ResultExpectedToBeOkException when {@code this} is an {@code Err<T, E>}
      */
-    default T expect(String message) throws NoSuchElementException {
+    default @NotNull T unwrap(String message) throws @NotNull ResultExpectedToBeOkException {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield ok.result;
-            case Err<T, E> ignored:
-                throw new NoSuchElementException(message);
+            case Ok<T, E>(T result) -> result;
+            case Err<T, E> ignored -> throw new ResultExpectedToBeOkException(message);
         };
     }
 
@@ -273,75 +310,144 @@ public sealed interface Result<T, E> extends Rusty<Optional<T>>, Try<T, Result<I
      * Returns the contained {@code Ok<T, E>} value.
      * <p>
      * Because this function may throw, its use is generally discouraged. Instead, prefer to use pattern matching and handle the
-     * {@code Err<T, E>} case explicitly, or call {@link Result#unwrapOr(Object)} or {@link Result#unwrapOrElse(Supplier)}.
+     * {@code Err<T, E>} case explicitly, or call {@link the.oronco.adt.Result#unwrapOr(Object)} or
+     * {@link the.oronco.adt.Result#unwrapOrElse(java.util.function.Supplier)}.
+     *
+     * @param exception the thrown exception
      *
      * @return the successful result
      *
-     * @throws NoSuchElementException when {@code this} is an {@code Err<T, E>}; the message is provided by the {@code Err<T, E>}s value
+     * @throws X when {@code this} is an {@code Err<T, E>}
      */
-    default T unwrap() throws NoSuchElementException {
+    default <X extends Exception> @NotNull T unwrap(@NotNull @NonNull X exception) throws @NotNull X {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield ok.result;
-            case Err<T, E> err:
-                throw new NoSuchElementException("Result was unwrapped but it was Err: %s".formatted(err.error));
+            case Ok<T, E>(T result) -> result;
+            case Err<T, E> ignored -> throw exception;
+        };
+    }
+
+    /**
+     * Returns the contained {@code Ok<T, E>} value.
+     * <p>
+     * Because this function may throw, its use is generally discouraged. Instead, prefer to use pattern matching and handle the
+     * {@code Err<T, E>} case explicitly, or call {@link the.oronco.adt.Result#unwrapOr(Object)} or
+     * {@link the.oronco.adt.Result#unwrapOrElse(java.util.function.Supplier)}.
+     *
+     * @param exceptionSupplier the supplier of the thrown exception which takes the contained error as an input
+     *
+     * @return the successful result
+     *
+     * @throws X when {@code this} is an {@code Err<T, E>}
+     */
+    default <X extends Exception> @NotNull T unwrapElse(@NotNull @NonNull Function<? super @NotNull E, @NotNull X> exceptionSupplier) throws
+                                                                                                                                      @NotNull X {
+        return switch (this) {
+            case Ok<T, E>(T result) -> result;
+            case Err<T, E> err -> throw exceptionSupplier.apply(err.error);
+        };
+    }
+
+    /**
+     * Returns the contained {@code Ok<T, E>} value.
+     * <p>
+     * Because this function may throw, its use is generally discouraged. Instead, prefer to use pattern matching and handle the
+     * {@code Err<T, E>} case explicitly, or call {@link the.oronco.adt.Result#unwrapOr(Object)} or
+     * {@link the.oronco.adt.Result#unwrapOrElse(java.util.function.Supplier)}.
+     *
+     * @return the successful result
+     *
+     * @throws java.util.NoSuchElementException when {@code this} is an {@code Err<T, E>}; the message is provided by the
+     *                                          {@code Err<T, E>}s value
+     */
+    default @NotNull T unwrap() throws @NotNull ResultExpectedToBeOkException {
+        return switch (this) {
+            case Ok<T, E>(T result) -> result;
+            case Err<T, E>(E error) ->
+                    throw new ResultExpectedToBeOkException("Result was unwrapped but it was Err: %s".formatted(error));
         };
     }
 
     /**
      * Returns the contained {@code Ok<T, E>} value or a default
      * <p>
-     * Consumes the self argument then, if {@code Ok<T, E>}, returns the contained value, otherwise if {@code Err<T, E>}, returns the
-     * provided {@code defaultValue}.
+     * If this is {@code Ok<T, E>}, returns the contained value, otherwise if {@code Err<T, E>}, returns the provided
+     * {@code defaultValue}.
      *
      * @param defaultValue default value when {@code Err<T, E>}
      *
      * @return either the successful result value or the default value
      */
-    default T unwrapOr(T defaultValue) {
+    default @NotNull T unwrapOr(@NotNull @NonNull T defaultValue) {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield ok.result;
-            case Err<T, E> ignored:
-                yield defaultValue;
+            case Ok<T, E>(T result) -> result;
+            case Err<T, E> ignored -> defaultValue;
         };
     }
 
     /**
      * Returns the contained {@code Ok<T, E>} value or a default provided by the {@code defaultSupplier}
      * <p>
-     * Consumes the self argument then, if {@code Ok<T, E>}, returns the contained value, otherwise if {@code Err<T, E>}, returns the
-     * default value returned by the {@code defaultSupplier}.
+     * If this is {@code Ok<T, E>}, returns the contained value, otherwise if {@code Err<T, E>}, returns the default value
+     * returned by the {@code defaultSupplier}.
      *
      * @param defaultSupplier default value when {@code Err<T, E>}
      *
      * @return either the successful result value or the default value provided by the {@code defaultSupplier}
      */
 
-    default T unwrapOrElse(Supplier<? extends T> defaultSupplier) {
+    default @NotNull T unwrapOrElse(@NotNull @NonNull Supplier<? extends @NotNull T> defaultSupplier) {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield ok.result;
-            case Err<T, E> ignored:
-                yield defaultSupplier.get();
+            case Ok<T, E>(T result) -> result;
+            case Err<T, E> ignored -> defaultSupplier.get();
         };
     }
 
     /**
      * Returns the contained {@code Err<T, E>} value.
      *
-     * @param message the message of the thrown error
+     * @param message the message of the thrown exception when there was no error
      *
      * @return the successful result
      *
-     * @throws NoSuchElementException when {@code this} is an {@code Ok<T, E>}
+     * @throws java.util.NoSuchElementException when {@code this} is an {@code Ok<T, E>}
      */
-    default E expectErr(String message) throws NoSuchElementException {
+    default @NotNull E unwrapErr(String message) throws @NotNull ResultExpectedToBeErrorException {
         return switch (this) {
-            case Ok<T, E> ignored:
-                throw new NoSuchElementException(message);
-            case Err<T, E> err:
-                yield err.error;
+            case Ok<T, E> ignored -> throw new ResultExpectedToBeErrorException(message);
+            case Err<T, E>(E error) -> error;
+        };
+    }
+
+    /**
+     * Returns the contained {@code Err<T, E>} value.
+     *
+     * @param exception the exception that will be thrown when there was no error
+     *
+     * @return the successful result
+     *
+     * @throws X when {@code this} is an {@code Ok<T, E>}
+     */
+    default <X extends Exception> @NotNull E unwrapErr(@NonNull @NotNull X exception) throws @NotNull X {
+        return switch (this) {
+            case Ok<T, E> ignored -> throw exception;
+            case Err<T, E>(E error) -> error;
+        };
+    }
+
+    /**
+     * Returns the contained {@code Err<T, E>} value.
+     *
+     * @param exceptionSupplier the supplier for the exception that will be thrown when there was no error
+     *
+     * @return the successful result
+     *
+     * @throws X when {@code this} is an {@code Ok<T, E>}
+     */
+    default <X extends Exception> @NotNull E unwrapErrElse(@NonNull @NotNull Function<? super @NotNull T, ? extends @NotNull X> exceptionSupplier) throws
+                                                                                                                                                   @NotNull X {
+        return switch (this) {
+            case Ok<T, E>(T result) -> throw exceptionSupplier.apply(result);
+            case Err<T, E>(E error) -> error;
         };
     }
 
@@ -350,34 +456,32 @@ public sealed interface Result<T, E> extends Rusty<Optional<T>>, Try<T, Result<I
      *
      * @return the successful result
      *
-     * @throws NoSuchElementException when {@code this} is an {@code Ok<T, E>}; the message is provided by the {@code Ok<T, E>}s value
+     * @throws java.util.NoSuchElementException when {@code this} is an {@code Ok<T, E>}; the message is provided by the
+     *                                          {@code Ok<T, E>}s value
      */
-    default E unwrapErr() throws NoSuchElementException {
+    default @NotNull E unwrapErr() throws @NotNull ResultExpectedToBeErrorException {
         return switch (this) {
-            case Ok<T, E> ok:
-                throw new NoSuchElementException("Result was unwrapped but it was Ok: %s".formatted(ok.result));
-            case Err<T, E> err:
-                yield err.error;
+            case Ok<T, E>(T result) ->
+                    throw new ResultExpectedToBeErrorException("Result was unwrapped but it was Ok: %s".formatted(result));
+            case Err<T, E>(E error) -> error;
         };
     }
 
     /**
      * Returns {@code other} if the result is {@code Ok<T, E>}, otherwise returns the {@code Err<T, E>} value of {@code this}.
      * <p>
-     * Arguments passed to {@code and()} are eagerly evaluated; if you are passing the result of a function call, it is recommended to use
-     * {@link Result#andThen(Supplier)}, which is lazily evaluated.
+     * Arguments passed to {@code and()} are eagerly evaluated; if you are passing the result of a function call, it is
+     * recommended to use {@link the.oronco.adt.Result#andThen(Function)}, which is lazily evaluated.
      *
-     * @param other another result which should be conditionally be returned depending on the success status of {@code this}
+     * @param other another result which should conditionally be returned depending on the success status of {@code this}
      * @param <U>   type of the other successful result
      *
      * @return the other successful result or the error of {@code this}
      */
-    default <U> Result<U, E> and(Result<U, E> other) {
+    default <U> @NotNull Result<U, E> and(@NotNull @NonNull Result<U, E> other) {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield other;
-            case Err<T, E> err:
-                yield err(err.error);
+            case Ok<T, E> ignored -> other;
+            case Err<T, E>(E error) -> err(error);
         };
     }
 
@@ -386,39 +490,37 @@ public sealed interface Result<T, E> extends Rusty<Optional<T>>, Try<T, Result<I
      * <p>
      * This function can be used for control flow based on Result values.
      *
-     * @param f   supplier of another result which should be conditionally be returned depending on the success status of {@code this}
+     * @param f   supplier of another result which should conditionally be returned depending on the success status of
+     *            {@code this}
      * @param <U> type of the other successful result
      *
      * @return the other successful result or the error of {@code this}
      */
-    default <U> Result<? extends U, ? extends E> andThen(Supplier<Result<? extends U, ? extends E>> f) {
+    default <U> @NotNull Result<? extends U, ? extends E> andThen(@NotNull @NonNull Function<? super @NotNull T, @NotNull Result<? extends U, ? extends E>> f) {
         return switch (this) {
-            case Ok<T, E> ignored:
-                yield f.get();
-            case Err<T, E> err:
-                yield err(err.error);
+            case Ok<T, E>(T result) -> f.apply(result);
+            case Err<T, E>(E error) -> err(error);
         };
     }
 
     /**
      * Returns {@code other} if the result is {@code Err<T, F>}, otherwise returns the {@code Ok<T, F>} value of {@code this}.
      * <p>
-     * Arguments passed to {@code or()} are eagerly evaluated; if you are passing the result of a function call, it is recommended to use
-     * {@link Result#orThen(Supplier)}, which is lazily evaluated.
+     * Arguments passed to {@code or()} are eagerly evaluated; if you are passing the result of a function call, it is recommended
+     * to use {@link the.oronco.adt.Result#orThen(java.util.function.Function)}, which is lazily evaluated.
      *
      * @param other the fallback result in case {@code this} is an {@code Err<T, E>}
      * @param <F>   type of the error of the other result
      *
      * @return {@code this} if it is successful {@code other} otherwise
      */
-    default <F> Result<T, F> or(Result<T, F> other) {
+    default <F> @NotNull Result<T, F> or(@NotNull @NonNull Result<T, F> other) {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield ok(ok.result);
-            case Err<T, E> ignored:
-                yield other;
+            case Ok<T, E>(T result) -> ok(result);
+            case Err<T, E> ignored -> other;
         };
     }
+
 
     /**
      * Calls f if the result is {@code Err<T, E>}, otherwise returns the {@code Ok<T, E>} value of {@code this}.
@@ -430,32 +532,67 @@ public sealed interface Result<T, E> extends Rusty<Optional<T>>, Try<T, Result<I
      *
      * @return {@code this} if it is successful {@code other} otherwise
      */
-    default <F> Result<? extends T, ? extends F> orThen(Supplier<Result<? extends T, ? extends F>> f) {
+    default <F> @NotNull Result<? extends T, ? extends F> orThen(@NotNull @NonNull Function<? super @NotNull E, Result<? extends T, ? extends F>> f) {
         return switch (this) {
-            case Ok<T, E> ok:
-                yield ok(ok.result);
-            case Err<T, E> ignored:
-                yield f.get();
+            case Ok<T, E>(T result) -> ok(result);
+            case Err<T, E>(E error) -> f.apply(error);
         };
     }
 
     @Override
-    default Optional<T> j() {
-        return Optional.ofNullable(this.unwrapOr(null));
+    default @NotNull Optional<T> j() {
+        return switch (this) {
+            case Ok<T, E>(T result) -> Optional.of(result);
+            case Err<T, E> ignored -> Optional.empty();
+        };
     }
 
-    static <T, E> Err<T, E> err(E error) {
+    @Contract(value = "_ -> new", pure = true)
+    static <T, E> @NotNull Result<T, E> err(@NotNull @NonNull E error) {
         return new Err<>(error);
     }
 
-    static <T, E> Ok<T, E> ok(T result) {
+    @Contract(value = "_ -> new", pure = true)
+    static <T, E> @NotNull Result<T, E> ok(@NotNull @NonNull T result) {
         return new Ok<>(result);
     }
 
-    default ControlFlow<Result<Infallible, E>, T> branch() {
+    @Contract(value = " -> new", pure = true)
+    static <E> @NotNull Ok<GOOD, E> good() {
+        return new Ok<>(GOOD);
+    }
+
+    static <T, E> @NotNull Result<T, E> from(T value, @NotNull @NonNull E error) {
+        return switch (Option.from(value)) {
+            case Option.Some<T>(T val) -> ok(val);
+            case Option.None<T> ignored -> err(error);
+        };
+    }
+
+    static <T, E> @NotNull Result<T, ? extends E> fromElse(T value,
+                                                           @NotNull @NonNull Supplier<? extends @NotNull E> errorSupplier) {
+        return switch (Option.from(value)) {
+            case Option.Some<T>(T val) -> ok(val);
+            case Option.None<T> ignored -> err(errorSupplier.get());
+        };
+    }
+
+    /**
+     * Allows for this to be returned by Spring JPA repositories.
+     */
+    static <T> @NotNull Result<Iterable<T>, Exception> of(@NotNull @NonNull Streamable<T> streamable) {
+        return switch (MultiOption.of(streamable)) {
+            case MultiOption.One<T>(T value) -> ok(Collections.singleton(value));
+            case MultiOption.Many<T>(var values) -> ok(values);
+            // TODO check if I can intercept JPA failures somehow and return that error instead
+            case MultiOption.None<T> ignored -> err(new NoSuchElementException("No Element found in stream!"));
+        };
+    }
+
+    default @NotNull ControlFlow<Result<Infallible, E>, T> branch() {
         return switch (this) {
-            case Result.Ok<T, E> ok -> new ControlFlow.Continue<>(ok.result);
-            case Result.Err<T, E> err -> new ControlFlow.Break<>(err(err.error));
+            case Ok<T, E>(T result) -> new Continue<>(result);
+            case Err<T, E>(E error) -> new Break<>(err(error));
         };
     }
 }
