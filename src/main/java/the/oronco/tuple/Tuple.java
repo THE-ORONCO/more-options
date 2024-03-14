@@ -141,7 +141,7 @@ public sealed interface Tuple permits MultiValue, Tuple.Size0, Size1, Size10, Si
         @Override
         default Result<Option<Object>, IndexError> get(int index) {
             if (index == SIZE - 1) {
-                return Result.ok(Option.from(Result.ok(this._2())));
+                return Result.ok(Option.from(this._2()));
             } else {
                 return Size2.super.get(index);
             }
@@ -170,7 +170,7 @@ public sealed interface Tuple permits MultiValue, Tuple.Size0, Size1, Size10, Si
         @Override
         default Result<Option<Object>, IndexError> get(int index) {
             if (index == SIZE - 1) {
-                return Result.ok(Option.from(Result.ok(this._3())));
+                return Result.ok(Option.from((this._3())));
             } else {
                 return Size3.super.get(index);
             }
@@ -199,7 +199,7 @@ public sealed interface Tuple permits MultiValue, Tuple.Size0, Size1, Size10, Si
         @Override
         default Result<Option<Object>, IndexError> get(int index) {
             if (index == SIZE - 1) {
-                return Result.ok(Option.from(Result.ok(this._4())));
+                return Result.ok(Option.from((this._4())));
             } else {
                 return Size4.super.get(index);
             }
@@ -228,7 +228,7 @@ public sealed interface Tuple permits MultiValue, Tuple.Size0, Size1, Size10, Si
         @Override
         default Result<Option<Object>, IndexError> get(int index) {
             if (index == SIZE - 1) {
-                return Result.ok(Option.from(Result.ok(this._5())));
+                return Result.ok(Option.from((this._5())));
             } else {
                 return Size5.super.get(index);
             }
@@ -257,7 +257,7 @@ public sealed interface Tuple permits MultiValue, Tuple.Size0, Size1, Size10, Si
         @Override
         default Result<Option<Object>, IndexError> get(int index) {
             if (index == SIZE - 1) {
-                return Result.ok(Option.from(Result.ok(this._6())));
+                return Result.ok(Option.from((this._6())));
             } else {
                 return Size6.super.get(index);
             }
@@ -286,7 +286,7 @@ public sealed interface Tuple permits MultiValue, Tuple.Size0, Size1, Size10, Si
         @Override
         default Result<Option<Object>, IndexError> get(int index) {
             if (index == SIZE - 1) {
-                return Result.ok(Option.from(Result.ok(this._7())));
+                return Result.ok(Option.from((this._7())));
             } else {
                 return Size7.super.get(index);
             }
@@ -314,8 +314,8 @@ public sealed interface Tuple permits MultiValue, Tuple.Size0, Size1, Size10, Si
 
         @Override
         default Result<Option<Object>, IndexError> get(int index) {
-            if (index == SIZE) {
-                return Result.ok(Option.from(Result.ok(this._8())));
+            if (index == SIZE - 1) {
+                return Result.ok(Option.from(this._8()));
             } else {
                 return Size8.super.get(index);
             }
@@ -344,7 +344,7 @@ public sealed interface Tuple permits MultiValue, Tuple.Size0, Size1, Size10, Si
         @Override
         default Result<Option<Object>, IndexError> get(int index) {
             if (index == SIZE - 1) {
-                return Result.ok(Option.from(Result.ok(this._9())));
+                return Result.ok(Option.from(this._9()));
             } else {
                 return Size9.super.get(index);
             }
