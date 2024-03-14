@@ -24,12 +24,10 @@ import java.util.Objects;
  * @author Théo Roncoletta
  * @since 06.03.24
  **/
-public sealed interface Tuple permits Size1, Size2, Size3, Size4, Size5, Size6, Size7, Size8, Size9, Size10, MultiValue {
+public sealed interface Tuple permits MultiValue, Tuple.Size0, Size1, Size10, Size2, Size3, Size4, Size5, Size6, Size7, Size8, Size9 {
     int size();
 
-    default boolean contains(Object other) {
-        return false;
-    }
+    boolean contains(Object other);
 
     default boolean containsAll(Iterable<?> others) {
         return StreamUtils.createStreamFromIterator(others.iterator())
@@ -49,7 +47,21 @@ public sealed interface Tuple permits Size1, Size2, Size3, Size4, Size5, Size6, 
         }
     }
 
-    sealed interface Size1<T0> extends Tuple permits Size2, Unit {
+    sealed interface Size0 extends Tuple permits Size1, Empty {
+        int SIZE = 0;
+
+        @Override
+        default int size() {
+            return SIZE;
+        }
+
+        @Override
+        default boolean contains(Object other) {
+            return false;
+        }
+    }
+
+    sealed interface Size1<T0> extends Tuple, Size0 permits Size2, Unit {
         int SIZE = 1;
 
         @Override
@@ -64,7 +76,7 @@ public sealed interface Tuple permits Size1, Size2, Size3, Size4, Size5, Size6, 
             if (Objects.equals(this._0(), other)) {
                 return true;
             } else {
-                return Tuple.super.contains(other);
+                return Size0.super.contains(other);
             }
         }
 
@@ -73,7 +85,7 @@ public sealed interface Tuple permits Size1, Size2, Size3, Size4, Size5, Size6, 
             if (index == SIZE - 1) {
                 return Result.ok(Option.from(this._0()));
             } else {
-                return Tuple.super.get(index);
+                return Size0.super.get(index);
             }
         }
     }
