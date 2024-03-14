@@ -68,4 +68,9 @@ public record Quartet<T0, T1, T2, T3>(T0 _0, T1 _1, T2 _2, T3 _3)
     public @NotNull Quartet<T3, T0, T1, T2> rotR() {
         return new Quartet<>(_3, _0, _1, _2);
     }
+
+    @Override
+    public String toString() {
+        return "(" + _0 + ", " + _1 + ", " + _2 + ", " + _3 + ')';
+    }
 }

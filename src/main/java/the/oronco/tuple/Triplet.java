@@ -67,4 +67,9 @@ public record Triplet<T0, T1, T2>(T0 _0, T1 _1, T2 _2)
     public @NotNull Triplet<T2, T0, T1> rotR() {
         return new Triplet<>(_2, _0, _1);
     }
+
+    @Override
+    public String toString() {
+        return "(" + _0 + ", " + _1 + ", " + _2 + ')';
+    }
 }

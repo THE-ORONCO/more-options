@@ -68,4 +68,9 @@ public record Pair<T0, T1>(T0 _0, T1 _1)
     public @NotNull Pair<T1, T0> rotR() {
         return new Pair<>(_1, _0);
     }
+
+    @Override
+    public String toString() {
+        return "(" + _0 + ", " + _1 + ')';
+    }
 }

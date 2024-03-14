@@ -1,12 +1,13 @@
 package the.oronco.tuple;
 
-import java.util.Collection;
-import java.util.List;
 import lombok.NonNull;
 import lombok.With;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 import the.oronco.adt.Result;
+
+import java.util.Collection;
+import java.util.List;
 
 /**
  * @author Théo Roncoletta
@@ -33,8 +34,8 @@ public record Unit<T0>(T0 _0) implements MultiValue<Unit<T0>, Unit<T0>, Unit<T0>
         return Result.ok(Unit.of(vals[0]));
     }
 
-    public static <T> @NotNull Result<Unit<T>, TupleError> from(@NonNull @NotNull final Iterable<T> iterable,
-                                                                long numberOfElementsToSkip) {
+    public static <T> @NotNull Result<Unit<T>, TupleError> from(
+            @NonNull @NotNull final Iterable<T> iterable, long numberOfElementsToSkip) {
         return from(iterable, numberOfElementsToSkip, false);
     }
 
@@ -42,9 +43,8 @@ public record Unit<T0>(T0 _0) implements MultiValue<Unit<T0>, Unit<T0>, Unit<T0>
         return from(iterable, 0, true);
     }
 
-    private static <T> @NotNull Result<Unit<T>, TupleError> from(@NonNull @NotNull final Iterable<T> iterable,
-                                                                 long numberOfElementsToSkip,
-                                                                 boolean exactSize) {
+    private static <T> @NotNull Result<Unit<T>, TupleError> from(
+            @NonNull @NotNull final Iterable<T> iterable, long numberOfElementsToSkip, boolean exactSize) {
 
         return Tuples.extractValues(iterable, numberOfElementsToSkip, exactSize, SIZE)
                      .map(vals -> Unit.of(vals[0]))
@@ -64,5 +64,10 @@ public record Unit<T0>(T0 _0) implements MultiValue<Unit<T0>, Unit<T0>, Unit<T0>
     @Override
     public @NotNull Unit<T0> rotR() {
         return new Unit<>(_0);
+    }
+
+    @Override
+    public String toString() {
+        return "(" + _0 + ')';
     }
 }

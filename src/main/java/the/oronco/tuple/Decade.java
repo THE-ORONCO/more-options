@@ -73,4 +73,9 @@ public record Decade<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(T0 _0, T1 _1, T2 _2
     public @NotNull Decade<T9, T0, T1, T2, T3, T4, T5, T6, T7, T8> rotR() {
         return new Decade<>(_9, _0, _1, _2, _3, _4, _5, _6, _7, _8);
     }
+
+    @Override
+    public String toString() {
+        return "(" + _0 + ", " + _1 + ", " + _2 + ", " + _3 + ", " + _4 + ", " + _5 + ", " + _6 + ", " + _7 + ", " + _8 + ", " + _9 + ')';
+    }
 }

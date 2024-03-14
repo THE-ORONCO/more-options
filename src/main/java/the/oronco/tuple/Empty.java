@@ -1,6 +1,7 @@
 package the.oronco.tuple;
 
 import lombok.AccessLevel;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.intellij.lang.annotations.MagicConstant;
 import org.jetbrains.annotations.NotNull;
@@ -14,6 +15,7 @@ import java.util.Collections;
  * @since 13.03.24
  **/
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
+@EqualsAndHashCode
 public final class Empty implements MultiValue<Empty, Empty, Empty>, Tuple.Size0 {
 
     @MagicConstant
@@ -36,5 +38,10 @@ public final class Empty implements MultiValue<Empty, Empty, Empty>, Tuple.Size0
     @Override
     public @NotNull Empty rotR() {
         return EMPTY;
+    }
+
+    @Override
+    public String toString() {
+        return "()";
     }
 }

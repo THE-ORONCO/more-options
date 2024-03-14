@@ -73,4 +73,9 @@ public record Ennead<T0, T1, T2, T3, T4, T5, T6, T7, T8>(T0 _0, T1 _1, T2 _2, T3
     public @NotNull Ennead<T8, T0, T1, T2, T3, T4, T5, T6, T7> rotR() {
         return new Ennead<>(_8, _0, _1, _2, _3, _4, _5, _6, _7);
     }
+
+    @Override
+    public String toString() {
+        return "(" + _0 + ", " + _1 + ", " + _2 + ", " + _3 + ", " + _4 + ", " + _5 + ", " + _6 + ", " + _7 + ", " + _8 + ')';
+    }
 }

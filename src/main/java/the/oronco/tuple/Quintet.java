@@ -68,4 +68,9 @@ public record Quintet<T0, T1, T2, T3, T4>(T0 _0, T1 _1, T2 _2, T3 _3, T4 _4)
     public @NotNull Quintet<T4, T0, T1, T2, T3> rotR() {
         return new Quintet<>(_4, _0, _1, _2, _3);
     }
+
+    @Override
+    public String toString() {
+        return "(" + _0 + ", " + _1 + ", " + _2 + ", " + _3 + ", " + _4 + ')';
+    }
 }
