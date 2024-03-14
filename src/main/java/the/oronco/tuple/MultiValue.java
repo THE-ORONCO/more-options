@@ -28,8 +28,9 @@ public sealed interface MultiValue<T extends MultiValue<T, L, R> & LeftRotation<
     }
 
     @SuppressWarnings("unchecked") // safe because T refers to the own type when the tuples are implemented correctly
-    default <O, X extends Exception> Result<? extends O, X> safeMap(@NotNull @NonNull ThrowingFunction<? super @NotNull T, ? extends O, @NotNull X> f) {
-        return f.apply((T) this);
+    default <O, X extends Exception> Result<O, X> safeMap(@NotNull @NonNull ThrowingFunction<? super @NotNull T, ? extends O, @NotNull X> f) {
+        return f.apply((T) this)
+                .map(o -> o);
     }
 
     @Override
