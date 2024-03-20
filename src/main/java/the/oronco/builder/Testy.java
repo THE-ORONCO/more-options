@@ -1,12 +1,10 @@
-package the.oronco;
+package the.oronco.builder;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
-import the.oronco.builder.Builder;
-import the.oronco.builder.RequiredField;
 
 
 @AllArgsConstructor

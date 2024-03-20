@@ -3,6 +3,7 @@ package the.oronco;
 import static the.oronco.builder.Builder.buildWith;
 
 import the.oronco.builder.RequiredField;
+import the.oronco.builder.Testy;
 
 public class Other {
     public static void main(String[] args) {
@@ -10,7 +11,6 @@ public class Other {
         Testy.TestyBuilder<RequiredField.Present<String>, RequiredField.Missing<Integer>> b1 = b0.value("a");
         Testy.TestyBuilder<RequiredField.Present<String>, RequiredField.Present<Integer>> b2 = b1.otherValue(1);
         Testy a = buildWith(b2);
-        b0.build();
         System.out.println(a);
     }
 }
